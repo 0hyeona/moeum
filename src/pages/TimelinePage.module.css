@@ -1,0 +1,102 @@
+/* 1920 기준 왼쪽 목록 734px(x=182), 오른쪽 패널 569px(x=1125). 좁아지면 두 열을 같은 비율로 줄입니다. */
+.page {
+  display: grid;
+  grid-template-columns: min(734px, (100% - 48px) * 0.563) min(569px, (100% - 48px) * 0.437);
+  grid-template-rows: auto 1fr;
+  grid-template-areas: 'toolbar aside' 'timeline aside';
+  justify-content: space-between;
+  gap: 46px 48px;
+  padding: 0 clamp(48px, 11.8vw, 226px) 80px clamp(48px, 9.5vw, 182px);
+}
+
+.toolbar { grid-area: toolbar; display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
+/* 검색어 지우기 버튼 자리까지 안내 문구가 다 보이도록 오른쪽 여백을 줄이고,
+   안내 문구가 들어갈 폭이 안 되면 필터 묶음을 다음 줄로 내립니다. */
+.search { flex: 1 1 410px; padding-right: 4px; }
+.filters { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
+.filter { font-weight: 700; }
+
+/* 활동 통계, 자주 쓴 태그 */
+.aside { grid-area: aside; align-self: start; display: flex; flex-direction: column; gap: 38px; min-width: 0; }
+.panel { padding: 32px; border: 1px solid var(--color-border); border-radius: var(--radius-control); background: var(--color-surface); }
+.panel h2 { margin: 0; font-size: 31px; line-height: 37px; font-weight: 700; }
+.stats { margin: 16px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 16px; font-size: 20px; line-height: 24px; }
+.tags { margin: 8px 0 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 8px 16px; }
+.tag {
+  display: flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 9.5px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-muted);
+  font-size: 12px;
+  line-height: 18px;
+  white-space: nowrap;
+  transition: border-color 150ms, color 150ms;
+}
+.tag:hover { border-color: var(--color-primary); color: var(--color-link); }
+.noTags { margin: 8px 0 0; color: var(--color-muted); font-size: 16px; line-height: 22px; }
+
+/* 월 → 날짜 → Story 카드 */
+.timeline { grid-area: timeline; min-width: 0; display: flex; flex-direction: column; gap: 48px; }
+.month { display: flex; flex-direction: column; gap: 31px; }
+.monthHeading { display: flex; align-items: center; gap: 19px; margin: 0; color: var(--color-link); font-size: 16px; line-height: 22px; font-weight: 700; white-space: nowrap; }
+/* 가로선 시작점에 6px 점을 둡니다. */
+.monthHeading::after {
+  content: '';
+  flex: 1;
+  height: 6px;
+  background:
+    radial-gradient(circle, var(--color-link) 2.5px, transparent 3px) 0 0 / 6px 6px no-repeat,
+    linear-gradient(rgb(156 179 247), rgb(156 179 247)) 3px 2px / 100% 2px no-repeat;
+}
+.day { padding-left: 48px; }
+.dayHeading { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 20px; line-height: 24px; font-weight: 700; }
+.dayHeading::before { content: ''; flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--color-link); }
+.count { color: var(--color-placeholder); font-size: 13px; line-height: 18px; font-weight: 400; }
+/* 타임라인 카드는 대시보드보다 작습니다(배지 26px, 날짜 10px). */
+.cards {
+  --story-card-badge-padding: 4px;
+  --story-card-summary-gap: 3px;
+  --story-card-date-size: 10px;
+  --story-card-date-line: 14px;
+  margin: 15px 48px 0 16px;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.empty { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 48px 16px; border: 1px solid var(--color-border); border-radius: var(--radius-control); background: var(--color-surface); color: var(--color-muted); text-align: center; word-break: keep-all; }
+.empty p { margin: 0; font-size: 16px; line-height: 22px; }
+.empty a, .empty button { padding: 0; border: 0; background: none; color: var(--color-link); font-size: 16px; line-height: 22px; text-decoration: none; }
+.empty a:hover, .empty button:hover { text-decoration: underline; text-underline-offset: 4px; }
+
+@media (max-width: 1439px) {
+  .page { grid-template-columns: minmax(0, 1fr) 360px; justify-content: stretch; gap: 32px 24px; padding: 0 48px 61px; }
+  .panel h2 { font-size: 25px; line-height: 30px; }
+  .aside { gap: 24px; }
+}
+@media (max-width: 1023px) {
+  .page { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; grid-template-areas: 'toolbar' 'aside' 'timeline'; }
+  .aside { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cards { margin-right: 0; }
+}
+@media (max-width: 700px) {
+  .page { gap: 16px; padding: 0 16px 48px; }
+  .toolbar { flex-wrap: wrap; }
+  .search { flex-basis: 100%; padding-right: 16px; }
+  .aside { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .panel { padding: 20px 16px; }
+  .panel h2 { font-size: 20px; line-height: 26px; }
+  .stats { margin-top: 12px; gap: 8px; font-size: 16px; line-height: 22px; }
+  .timeline { margin-top: 16px; gap: 32px; }
+  .month { gap: 20px; }
+  .day { padding-left: 0; }
+  .dayHeading { font-size: 18px; }
+  .cards { margin: 12px 0 0; gap: 12px; }
+  .cards { --story-card-date-size: 12px; --story-card-date-line: 16px; }
+}

@@ -1,0 +1,35 @@
+/* 입력 필드 공통 모양. 라벨과 입력칸 사이 간격은 화면마다 달라 --field-gap으로 바꿀 수 있습니다(기본 8px). */
+.field { min-width: 0; display: flex; flex-direction: column; gap: var(--field-gap, 8px); }
+.labelRow { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.label { font-size: 20px; line-height: 24px; }
+.hint { flex: none; color: var(--color-link); font-size: 20px; line-height: 24px; }
+
+.input, .textarea {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: inherit;
+  font-size: 16px;
+  line-height: 22px;
+  transition: border-color 150ms;
+}
+.input { height: 58px; padding: 0 16px; }
+/* 한 줄 높이(40px)에서 시작해 내용만큼 늘어납니다. .multiline은 처음부터 여러 줄 높이로 보여줍니다. */
+.textarea { display: block; min-height: 40px; padding: 8px 16px; font-family: inherit; resize: none; field-sizing: content; overflow-wrap: anywhere; }
+.multiline { min-height: 120px; }
+.input::placeholder, .textarea::placeholder { color: var(--color-placeholder); opacity: 1; }
+.input:hover, .textarea:hover { border-color: var(--color-subtle); }
+.input:focus, .textarea:focus { border-color: var(--color-primary); }
+.textarea:focus-visible { outline: 3px solid var(--color-primary-hover); outline-offset: 3px; }
+.input[aria-invalid='true'], .textarea[aria-invalid='true'] { border-color: var(--color-error); }
+.error { margin: 0; color: var(--color-error); font-size: 13px; line-height: 20px; }
+
+.radio { appearance: none; flex: none; width: 16px; height: 16px; margin: 0; border: 1px solid var(--color-primary); border-radius: 50%; background: var(--color-surface); cursor: pointer; }
+.radio:checked { background: radial-gradient(circle closest-side, var(--color-primary) 81%, var(--color-selected) 86%); }
+
+@media (max-width: 700px) {
+  .label, .hint { font-size: 16px; line-height: 22px; }
+  .input { height: 48px; }
+}

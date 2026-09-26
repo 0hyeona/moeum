@@ -1,0 +1,83 @@
+.page { padding: 55px 48px 61px; display: flex; flex-direction: column; gap: 64px; }
+.topRow { display: grid; grid-template-columns: 701px minmax(0, 1fr); gap: 24px; }
+.bottomRow { display: grid; grid-template-columns: 594px minmax(0, 1fr); gap: 24px; align-items: start; }
+
+.panel { min-width: 0; padding: 32px; border: 1px solid var(--color-border); border-radius: var(--radius-control); background: var(--color-surface); }
+.panel h2 { margin: 0; font-size: 25px; line-height: 30px; font-weight: 700; }
+.panelHeader { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.panelHeader a { flex: none; color: var(--color-link); font-size: 16px; line-height: 22px; text-decoration: none; }
+.panelHeader a:hover { text-decoration: underline; text-underline-offset: 4px; }
+.empty { margin: 24px 0 0; padding: 32px 16px; border-radius: var(--radius-control); background: var(--color-background); color: var(--color-muted); text-align: center; word-break: keep-all; }
+
+/* 미정리 변경사항 조회 */
+.pending { display: flex; flex-direction: column; padding-bottom: 10px; }
+.stats { margin: 32px 0 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.stat { display: flex; flex-direction: column; gap: 16px; padding: 16px 32px; border: 1px solid var(--color-border); border-radius: var(--radius-control); }
+.statService { display: flex; align-items: center; gap: 8px; font-size: 16px; line-height: 24px; }
+.count, .alert, .muted { align-self: flex-end; line-height: 30px; white-space: nowrap; }
+.count { display: flex; align-items: baseline; height: 30px; font-size: 16px; }
+.count strong { color: var(--color-link); font-size: 25px; }
+.alert, .muted { font-size: 20px; font-weight: 700; }
+.alert { color: var(--color-alert); }
+.muted { color: var(--color-placeholder); }
+.storyButton { align-self: center; width: 200px; margin-top: 16px; }
+
+/* Repository 선택: 목록은 옆 패널 높이에 맞춰 늘어나고 넘치면 스크롤됩니다. */
+.repositories { display: flex; flex-direction: column; padding-bottom: 2px; }
+.repositoryList { flex: 1 1 auto; height: 0; margin-top: 8px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+.repository {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 50px;
+  padding: 0 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  color: var(--color-link);
+  font-size: 16px;
+  line-height: 22px;
+  cursor: pointer;
+  transition: border-color 150ms, background-color 150ms;
+}
+.repository:hover { border-color: var(--color-primary); }
+.repository:has(:checked) { border-color: var(--color-primary); background: var(--color-selected); }
+.repository span { min-width: 0; overflow-wrap: anywhere; }
+
+/* 최근 Story */
+.stories { margin: 32px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 16px; }
+
+/* 최근 GitHub 변경사항 */
+.commits { min-height: 392px; }
+.tableScroll { margin-top: 42px; overflow-x: auto; }
+.table { width: 100%; min-width: 720px; border-collapse: collapse; table-layout: fixed; text-align: left; font-size: 16px; line-height: 22px; }
+.narrowColumn { width: 17.4%; }
+.messageColumn { width: 37.7%; }
+/* 행 높이 28px, 행 사이 24px: 텍스트 칸은 위아래 3px, 배지 칸은 0px 여백 */
+.table th, .table td { padding: 3px 24px 3px 0; vertical-align: top; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.table th { padding: 0 24px 24px 0; color: var(--color-subtle); font-weight: 400; }
+.table th:last-child, .table td:last-child { padding-right: 0; }
+.table td:last-child { padding-block: 0; }
+.table tbody tr + tr td { padding-top: 27px; }
+.table tbody tr + tr td:last-child { padding-top: 24px; }
+.additions { color: var(--color-positive); }
+.deletions { color: var(--color-negative); }
+
+@media (max-width: 1439px) {
+  .page { gap: 24px; }
+  .topRow, .bottomRow { grid-template-columns: minmax(0, 1fr); }
+  .repositoryList { flex: none; height: auto; max-height: 266px; margin-bottom: 30px; }
+  .commits { min-height: 0; }
+}
+@media (max-width: 700px) {
+  .page { padding: 24px 16px 48px; gap: 16px; }
+  .topRow, .bottomRow { gap: 16px; }
+  .panel { padding: 20px 16px; }
+  .pending { padding-bottom: 20px; }
+  .panel h2 { font-size: 20px; line-height: 26px; }
+  .panelHeader a { font-size: 14px; }
+  .stats { grid-template-columns: minmax(0, 1fr); gap: 8px; margin-top: 20px; }
+  .stat { flex-direction: row; justify-content: space-between; align-items: center; padding: 12px 16px; }
+  .stories { margin-top: 20px; }
+  .tableScroll { margin-top: 24px; }
+}

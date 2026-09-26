@@ -1,0 +1,70 @@
+.page { padding-bottom: 80px; }
+.layout { display: grid; grid-template-columns: 758px minmax(0, 1fr); gap: 29px; align-items: start; padding: 0 63px 0 65px; }
+
+/* 검색, 필터, 피드 */
+.changes { min-width: 0; display: flex; flex-direction: column; }
+.toolbar { display: flex; gap: 16px; }
+.search { flex: 1; }
+.filters { display: flex; gap: 8px; }
+.restore, .textButton { padding: 4px 0; border: 0; background: none; color: var(--color-link); font-size: 16px; line-height: 22px; }
+.restore:hover, .textButton:hover { text-decoration: underline; text-underline-offset: 4px; }
+.restore { align-self: flex-start; margin-top: 16px; }
+.feed { margin: 37px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 24px; }
+.empty { margin: 32px 0 0; padding: 32px 16px; border-radius: var(--radius-control); background: var(--color-background); color: var(--color-muted); text-align: center; word-break: keep-all; }
+.changes > .empty { margin-top: 37px; border: 1px solid var(--color-border); background: var(--color-surface); }
+.empty p { margin: 0; }
+.empty .emptyHint { margin-top: 8px; font-size: 13px; line-height: 18px; }
+.empty .textButton { display: block; margin: 12px auto 0; }
+.restore + .feed, .changes > .restore + .empty { margin-top: 16px; }
+
+.card { position: relative; border: 1px solid var(--color-border); border-radius: var(--radius-control); background: var(--color-surface); transition: border-color 150ms; }
+.card:hover { border-color: var(--color-subtle); }
+.card:has(:checked) { border-color: var(--color-primary); }
+.cardBody { display: flex; flex-direction: column; align-items: flex-start; padding: 15px; cursor: pointer; }
+.cardHeader { align-self: stretch; min-height: 44px; display: flex; align-items: center; gap: 10px; padding-right: 36px; }
+.source { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; padding-top: 2px; font-size: 16px; line-height: 22px; }
+.service { font-weight: 700; }
+.meta { color: var(--color-muted); }
+.check { margin-left: auto; }
+.title { margin-top: 15px; font-size: 20px; line-height: 24px; font-weight: 700; word-break: keep-all; overflow-wrap: anywhere; }
+.description { margin-top: 10px; color: var(--color-muted); font-size: 16px; line-height: 22px; word-break: keep-all; overflow-wrap: anywhere; }
+.status { display: flex; margin-top: 14px; }
+.hide { position: absolute; top: 24px; right: 15px; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; padding: 0; border: 0; border-radius: 6px; background: none; transition: background-color 150ms; }
+.hide:hover { background: var(--color-border); }
+.hide img { display: block; }
+
+/* 선택된 변경사항, 분석 방식 */
+.side { min-width: 0; display: flex; flex-direction: column; gap: 24px; }
+.panel { min-width: 0; padding: 32px; border: 1px solid var(--color-border); border-radius: var(--radius-control); background: var(--color-surface); }
+.panel h2 { margin: 0; font-size: 25px; line-height: 30px; font-weight: 700; }
+.selectedPanel { min-height: 491px; }
+.selectedList { margin: 32px 0 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.selectedItem { min-width: 0; display: flex; flex-direction: column; }
+.selectedItem > * { flex: 1; }
+.modes { margin-top: 32px; }
+.analyzeButton { align-self: flex-end; margin-top: 12px; }
+
+@media (max-width: 1439px) {
+  .layout { grid-template-columns: minmax(0, 1fr); gap: 24px; padding: 0 48px; }
+  .selectedPanel { min-height: 0; }
+}
+@media (max-width: 700px) {
+  .page { padding-bottom: 48px; }
+  .layout { gap: 16px; padding: 0 16px; }
+  .toolbar { flex-direction: column; gap: 8px; }
+  .search { flex: none; }
+  .filters { flex-wrap: wrap; }
+  .feed { margin-top: 16px; gap: 16px; }
+  .empty { margin-top: 20px; }
+  .changes > .empty { margin-top: 16px; }
+  .cardBody { padding: 15px 15px 16px; }
+  .title { margin-top: 12px; font-size: 18px; line-height: 22px; }
+  .description { font-size: 14px; line-height: 20px; }
+  .status { margin-top: 12px; }
+  .side { gap: 16px; }
+  .panel { padding: 20px 16px; }
+  .panel h2 { font-size: 20px; line-height: 26px; }
+  .selectedList { grid-template-columns: minmax(0, 1fr); gap: 8px; margin-top: 20px; }
+  .modes { margin-top: 20px; }
+  .analyzeButton { align-self: stretch; margin-top: 0; }
+}

@@ -1,0 +1,74 @@
+.page { padding: 31px 0 88px; }
+.page > header { padding-bottom: 48px; }
+/* 디자인의 두 패널은 좌우 여백이 48px·30px로 다릅니다. 제목과 버튼은 화면 가운데에 둡니다. */
+.columns { display: grid; grid-template-columns: minmax(0, 936fr) minmax(0, 842fr); gap: 64px; padding: 0 30px 0 48px; }
+.panel { min-width: 0; padding: 32px; border-radius: var(--radius-control); background: var(--color-surface); }
+
+/* 태그 · 상태 · 작성일 */
+.meta { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; min-height: 34px; margin-bottom: 16px; }
+.tags { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 8px; }
+.tag { padding: 5px 9px; border-radius: var(--radius-control); background: var(--color-border); color: var(--color-muted); font-size: 20px; line-height: 24px; }
+.status { display: flex; align-items: center; gap: 12px; margin-left: auto; color: var(--color-subtle); font-size: 13px; line-height: 18px; white-space: nowrap; }
+
+/* 라벨과 읽기 전용 내용 칸 */
+.fields { margin: 0; display: flex; flex-direction: column; gap: 32px; }
+.field { min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.field:has(> .single) { gap: 8px; }
+.label { color: #000; font-size: 20px; line-height: 24px; }
+.value {
+  margin: 0;
+  padding: 9px 16px 7px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  color: var(--color-placeholder);
+  font-size: 16px;
+  line-height: 22px;
+  white-space: pre-line;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+.single { padding-block: 18px 16px; }
+.empty { color: var(--color-subtle); }
+/* 왼쪽 패널의 내용 칸은 아래에 1px 구분선이 붙습니다. */
+.underlined .value { position: relative; margin-bottom: 1px; }
+.underlined .value::after { content: ''; position: absolute; inset: auto -1px -2px; height: 1px; background: var(--color-border-strong); }
+
+/* Before / After */
+.comparison { margin: 0; }
+.field:has(> .comparison) { gap: 16px; }
+.comparisonList { margin: 0; display: flex; flex-direction: column; gap: 25px; }
+.comparisonList .field { gap: 6px; }
+.before, .after { padding-top: 2px; font-size: 16px; line-height: 22px; }
+.before { color: #ff383c; }
+.after { color: #34c759; }
+
+/* 수정 · 삭제 · 내보내기 */
+.actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px; margin-top: 48px; }
+.button { min-width: 86px; }
+.editButton, .editButton:hover { color: #0c6bbe; }
+.deleteButton { color: var(--color-negative); }
+.deleteButton:hover { background: #fdf0f0; color: var(--color-negative); }
+.exportButton { min-width: 102px; background: #0c6bbe; }
+.exportButton:hover { background: #0a5aa0; }
+
+.notFound { margin: 0 48px; display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 48px 16px; border-radius: var(--radius-control); background: var(--color-surface); text-align: center; }
+.notFound p { margin: 0; color: var(--color-muted); font-size: 20px; line-height: 24px; }
+.notFound a { color: var(--color-link); font-size: 16px; line-height: 22px; }
+
+@media (max-width: 1439px) {
+  .columns { grid-template-columns: minmax(0, 1fr); gap: 24px; padding-inline: 48px; }
+}
+@media (max-width: 700px) {
+  .page { padding: 0 0 48px; }
+  .page > header { padding-bottom: 36px; }
+  .columns { gap: 16px; padding-inline: 16px; }
+  .notFound { margin-inline: 16px; }
+  .panel { padding: 20px 16px; }
+  .fields { gap: 24px; }
+  .label { font-size: 16px; line-height: 22px; }
+  .field { gap: 8px; }
+  .tag { padding: 4px 8px; font-size: 14px; line-height: 20px; }
+  .meta { min-height: 28px; }
+  .actions { gap: 8px; margin-top: 32px; padding-inline: 16px; }
+  .actions > * { flex: 1; min-width: 0; }
+}

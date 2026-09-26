@@ -1,0 +1,13 @@
+/* 로그인 화면 안내창과 같은 모양. 안쪽 .content가 dialog를 꽉 채워서 dialog 자체를 누른 경우만 바깥 클릭입니다. */
+.dialog { width: min(400px, calc(100% - 48px)); padding: 0; border: none; border-radius: var(--radius-card); background: var(--color-surface); color: var(--color-text-strong); box-shadow: 0 12px 48px rgb(0 0 0 / 16%); }
+.dialog::backdrop { background: rgb(30 35 50 / 32%); }
+.content { padding: 28px; }
+.content h2 { margin: 0; font-size: 20px; line-height: 1.4; font-weight: 700; word-break: keep-all; }
+.content p { margin: 16px 0 24px; color: var(--color-muted); font-size: 16px; line-height: 1.6; white-space: pre-line; word-break: keep-all; }
+.actions { display: flex; justify-content: flex-end; gap: 8px; }
+.dialog .cancel { border: 1px solid var(--color-border-strong); }
+
+@media (max-width: 520px) {
+  .content { padding: 24px 20px; }
+  .actions button { flex: 1; min-width: 0; }
+}

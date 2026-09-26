@@ -1,0 +1,56 @@
+.page { padding: 0 48px 88px; }
+.form { display: flex; flex-direction: column; align-items: center; gap: 32px; }
+.panel { width: 100%; padding: 24px 32px; border-radius: var(--radius-card); background: var(--color-surface); display: flex; flex-direction: column; gap: 16px; }
+.field { display: flex; flex-direction: column; gap: 8px; }
+.field label { font-size: 20px; line-height: 24px; }
+.input {
+  width: 100%;
+  min-width: 0;
+  height: 58px;
+  padding: 0 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: inherit;
+  font-size: 16px;
+  line-height: 22px;
+  transition: border-color 150ms;
+}
+.input::placeholder { color: var(--color-subtle); opacity: 1; }
+.input:hover { border-color: var(--color-subtle); }
+.input:focus { border-color: var(--color-primary); }
+.input[aria-invalid='true'] { border-color: var(--color-error); }
+.error { margin: 0; color: var(--color-error); font-size: 13px; line-height: 20px; }
+
+.connections { display: flex; flex-direction: column; gap: 20px; }
+.connection {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 24px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+}
+.connectionTitle { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; font-size: 20px; line-height: 24px; }
+.connection .input { height: 40px; }
+.connection .error { grid-column: 1; margin-top: -4px; }
+.select {
+  appearance: none;
+  padding-right: 56px;
+  background: var(--color-surface) url('../../assets/icons/chevron-down.svg') no-repeat right 16px center / 24px 24px;
+  cursor: pointer;
+}
+.placeholder { color: var(--color-subtle); }
+.select option { color: var(--color-text-strong); }
+.connectButton { min-width: 50px; padding: 8px; border: 0; border-radius: var(--radius-control); background: none; color: inherit; font-size: 13px; line-height: 18px; white-space: nowrap; transition: background-color 150ms, color 150ms; }
+.connectButton:hover { background: var(--color-selected); color: var(--color-link); }
+.connected { color: var(--color-link); font-weight: 700; }
+
+@media (max-width: 700px) {
+  .page { padding: 0 16px 48px; }
+  .panel { padding: 20px 16px; }
+  .field label, .connectionTitle { font-size: 16px; line-height: 22px; }
+  .input { height: 48px; }
+  .connection { padding: 16px 12px; gap: 8px; }
+}

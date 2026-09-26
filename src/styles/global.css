@@ -1,0 +1,47 @@
+@font-face {
+  font-family: Pretendard;
+  src: url('../../assets/PretendardVariable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+:root {
+  font-family: Pretendard, -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #333;
+  background: #f7f8fb;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  --color-background: #f7f8fb;
+  --color-surface: #fff;
+  --color-text: #333;
+  --color-text-strong: #060607;
+  --color-muted: #6b6c6f;
+  --color-placeholder: #949499;
+  --color-subtle: #b4b5ba;
+  --color-border: #eeeff2;
+  --color-border-strong: #e0e1e6;
+  --color-primary: #6489f8;
+  --color-primary-hover: #426ef3;
+  --color-link: #426ef3;
+  --color-selected: #f5f7ff;
+  --color-error: #c13838;
+  --color-alert: #ff6b6e;
+  --color-positive: #17ad3c;
+  --color-negative: #d92e32;
+  --radius-control: 8px;
+  --radius-card: 16px;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; }
+button, input, select { font: inherit; }
+button { cursor: pointer; }
+button, input, select, a { -webkit-tap-highlight-color: transparent; }
+button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible {
+  outline: 3px solid var(--color-primary-hover);
+  outline-offset: 3px;
+}
+button { touch-action: manipulation; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; }
+}

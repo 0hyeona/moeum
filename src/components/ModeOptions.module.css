@@ -1,0 +1,5 @@
+.options { display: flex; flex-wrap: wrap; gap: 8px 16px; }
+.option, .readOnly { display: flex; align-items: center; gap: 8px; font-size: 16px; line-height: 22px; white-space: nowrap; }
+.option { cursor: pointer; }
+.readOnly { margin: 0; }
+.mark { flex: none; width: 16px; height: 16px; border: 1px solid var(--color-primary); border-radius: 50%; background: radial-gradient(circle closest-side, var(--color-primary) 81%, var(--color-selected) 86%); }

@@ -1,0 +1,30 @@
+.card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  column-gap: 16px;
+  padding: 9px 32px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 150ms;
+}
+.card:hover { border-color: var(--color-primary); }
+/* 타임라인처럼 카드를 더 작게 쓰는 화면은 아래 변수로 배지·요약·날짜 크기를 바꿉니다. */
+.card > :first-child { padding-block: var(--story-card-badge-padding, 5px); }
+.text { min-width: 0; display: flex; flex-direction: column; }
+.title, .summary { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.title { font-size: 16px; line-height: 22px; }
+.summary { margin-top: var(--story-card-summary-gap, 2px); font-size: 13px; line-height: 18px; }
+.cardTags { margin-top: 5px; }
+.date { align-self: center; color: var(--color-subtle); font-size: var(--story-card-date-size, 13px); line-height: var(--story-card-date-line, 18px); white-space: nowrap; }
+
+.tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.tag { padding: 4px 8px; border: 1px solid var(--color-border); border-radius: var(--radius-control); color: var(--color-muted); font-size: 13px; line-height: 18px; }
+
+@media (max-width: 700px) {
+  .card { grid-template-columns: auto minmax(0, 1fr); padding: 12px 16px; }
+  .date { grid-column: 2; margin-top: 8px; }
+}

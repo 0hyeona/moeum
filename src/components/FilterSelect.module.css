@@ -1,0 +1,24 @@
+/* 폭은 선택된 항목 글자에 맞춰집니다: 왼쪽 14px + 글자 + 8px + 아이콘 22px + 오른쪽 14px */
+.select {
+  appearance: none;
+  field-sizing: content;
+  flex: none;
+  max-width: 100%;
+  height: 58px;
+  padding: 0 43px 0 13px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface) url('../../assets/icons/chevron-down.svg') no-repeat right 12px center / 24px 24px;
+  color: inherit;
+  font-size: 16px;
+  line-height: 22px;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  transition: border-color 150ms;
+}
+.select:hover { border-color: var(--color-subtle); }
+.select option { color: var(--color-text-strong); font-weight: 400; }
+
+@media (max-width: 700px) {
+  .select { height: 48px; }
+}

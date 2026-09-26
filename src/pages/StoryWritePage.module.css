@@ -1,0 +1,42 @@
+.page { padding: 0 48px 169px; }
+/* 제목과 입력 영역 사이는 다른 화면보다 좁게(24px) 둡니다. */
+.page > header { padding-bottom: 24px; }
+.form { display: flex; flex-direction: column; align-items: center; gap: 107px; }
+.columns { width: 100%; max-width: 1512px; display: grid; grid-template-columns: minmax(0, 988fr) minmax(0, 476fr); gap: 48px; align-items: start; }
+.panel { min-width: 0; padding: 32px; border-radius: var(--radius-control); background: var(--color-surface); }
+
+/* 회고 템플릿 */
+.template { --field-gap: 10px; display: flex; flex-direction: column; gap: 30px; }
+
+/* 태그, 메모 */
+.side { min-width: 0; display: flex; flex-direction: column; gap: 29px; }
+.tags { padding-block: 16px; display: flex; flex-direction: column; gap: 16px; }
+.tagsHeading { display: flex; align-items: center; gap: 10px; min-height: 26px; }
+.tagsHeading h2 { margin: 0; font-size: 20px; line-height: 24px; font-weight: 400; }
+.tagsHeading .aiBadge { padding: 3px 8px; font-size: 12px; line-height: 18px; }
+.memo textarea { min-height: 249px; }
+
+.notFound { max-width: 560px; margin: 0 auto; padding: 48px 24px; border-radius: var(--radius-control); background: var(--color-surface); display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center; }
+.notFound p { margin: 0; color: var(--color-muted); }
+.notFound a { color: var(--color-link); text-decoration: none; }
+.notFound a:hover { text-decoration: underline; text-underline-offset: 4px; }
+
+@media (max-width: 1439px) {
+  .form { gap: 48px; }
+  .columns { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  .side { gap: 24px; }
+  .memo textarea { min-height: 160px; }
+}
+@media (max-width: 700px) {
+  .page { padding: 0 16px 48px; }
+  .page > header { padding-bottom: 16px; }
+  .form { gap: 32px; }
+  .columns, .side { gap: 16px; }
+  .panel { padding: 20px 16px; }
+  /* 좁은 화면에서는 긴 안내 문구가 어절 단위로 줄바꿈되도록 합니다. */
+  .panel textarea { word-break: keep-all; }
+  .template { --field-gap: 8px; gap: 20px; }
+  .tags { padding-block: 16px; gap: 12px; }
+  .tagsHeading h2 { font-size: 16px; line-height: 22px; }
+  .memo textarea { min-height: 120px; }
+}

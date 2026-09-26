@@ -1,0 +1,69 @@
+.pageHeading { padding: 52px 24px; text-align: center; }
+.pageHeading h1 { margin: 0; font-size: 39px; line-height: 1.2; font-weight: 700; word-break: keep-all; }
+.pageHeading p { margin: 6px 0 0; font-size: 16px; line-height: 1.4; word-break: keep-all; }
+
+/* 141×58 cta. dangerButton은 되돌릴 수 없는 작업(삭제), secondaryButton은 흰 배경 보조 버튼입니다. */
+.primaryButton, .dangerButton, .secondaryButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 141px;
+  min-height: 58px;
+  padding: 16px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 20px;
+  line-height: 24px;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color 150ms, transform 150ms;
+}
+.primaryButton:hover { background: var(--color-primary-hover); }
+.dangerButton { background: #e0585b; font-weight: 700; }
+.dangerButton:hover { background: #c63e41; }
+.secondaryButton { min-width: 86px; background: var(--color-surface); color: var(--color-text-strong); transition: background-color 150ms, color 150ms, transform 150ms; }
+.secondaryButton:hover { background: var(--color-selected); color: var(--color-link); }
+.primaryButton:active, .dangerButton:active, .secondaryButton:active { transform: translateY(1px); }
+.primaryButton:disabled, .dangerButton:disabled, .secondaryButton:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+.primaryButton:disabled { background: var(--color-primary); }
+.dangerButton:disabled { background: #e0585b; }
+.secondaryButton:disabled { background: var(--color-surface); color: var(--color-text-strong); }
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  padding: 5px 8px;
+  border-radius: var(--radius-control);
+  font-size: 13px;
+  line-height: 18px;
+  white-space: nowrap;
+}
+.gray { background: var(--color-border); color: var(--color-muted); }
+.green { background: rgb(23 173 60 / 20%); color: #17ad3c; }
+.blue { background: rgb(12 107 190 / 20%); color: #0c6bbe; }
+.yellow { background: rgb(178 143 3 / 20%); color: #b28f03; }
+
+.serviceIcon { display: inline-flex; flex: none; align-items: center; justify-content: center; }
+.serviceIcon img { display: block; }
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 700px) {
+  .pageHeading { padding: 36px 16px; }
+  .pageHeading h1 { font-size: 28px; }
+  .pageHeading p { font-size: 14px; }
+  .primaryButton, .dangerButton, .secondaryButton { min-height: 48px; padding: 12px 16px; font-size: 16px; }
+}
