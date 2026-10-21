@@ -3,6 +3,8 @@ import { Navigate, useNavigate } from 'react-router';
 import { clearAccessToken, getAccessToken, getCurrentUser, logout, type AuthUser } from '../api/auth';
 import { ApiError } from '../api/client';
 import { SessionSkeleton } from './Skeleton';
+import { AuthContext } from '../state/AuthContext';
+import { ProjectsProvider } from '../state/ProjectsContext';
 import styles from './AuthBoundary.module.css';
 
 export function AuthBoundary({ children }: { children: ReactNode }) {
@@ -44,12 +46,7 @@ export function AuthBoundary({ children }: { children: ReactNode }) {
   if (!user) return error ? <main className={styles.loading}>
     <p role="alert">{error}</p><button onClick={() => setAttempt(value => value + 1)}>다시 시도</button>
   </main> : <SessionSkeleton />;
-  return <>
-    <div className={styles.account}>
-      <span>{user.name}님</span>
-      <button onClick={() => void signOut()} disabled={leaving}>{leaving ? '로그아웃 중…' : '로그아웃'}</button>
-      {error && <p role="alert">{error}</p>}
-    </div>
-    {children}
-  </>;
+  return <AuthContext.Provider value={{ user, signOut, leaving, error }}>
+    <ProjectsProvider>{children}</ProjectsProvider>
+  </AuthContext.Provider>;
 }

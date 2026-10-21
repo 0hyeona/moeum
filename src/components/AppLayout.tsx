@@ -4,6 +4,7 @@ import logo from '../../assets/moeum-logo-header.svg';
 import chevronDown from '../../assets/icons/chevron-down.svg';
 import { useProjects } from '../state/ProjectsContext';
 import { PageGuide } from './PageGuide';
+import { ProfileMenu } from './ProfileMenu';
 import styles from './AppLayout.module.css';
 
 const navigation = [
@@ -26,6 +27,7 @@ export function AppLayout({ header }: { header: 'centered' | 'project' }) {
         {header === 'centered' ? (
           <div className={`${styles.header} ${styles.centered}`}>
             <HomeLink />
+            <ProfileMenu />
           </div>
         ) : (
           <div className={styles.header}>
@@ -36,6 +38,7 @@ export function AppLayout({ header }: { header: 'centered' | 'project' }) {
                 <NavLink key={item.to} to={item.to} className={({ isActive }) => isActive ? styles.active : undefined}>{item.label}</NavLink>
               ))}
             </nav>
+            <ProfileMenu />
           </div>
         )}
       </header>

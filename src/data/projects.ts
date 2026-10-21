@@ -1,7 +1,7 @@
 export type Service = 'GitHub' | 'Figma' | 'Notion';
 export const services: readonly Service[] = ['GitHub', 'Figma', 'Notion'];
 
-export type ProjectStatus = '진행 중' | '완료' | '사용자';
+export type ProjectStatus = '진행 중' | '완료' | '사용자' | '보관됨';
 
 export type ServiceState =
   | { status: 'connected' }
@@ -60,6 +60,7 @@ export type Commit = {
 };
 
 export type Project = {
+  urls?: Record<Service, string>;
   id: string;
   name: string;
   description: string;

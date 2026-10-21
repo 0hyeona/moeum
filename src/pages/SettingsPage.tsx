@@ -1,7 +1,7 @@
 import { useRef, useState, type KeyboardEvent } from 'react';
 import { Navigate, useNavigate } from 'react-router';
 import errorIcon from '../../assets/icons/error.svg';
-import type { Project, Service, ServiceState } from '../data/projects';
+import type { Project, Service } from '../data/projects';
 import { useProjects } from '../state/ProjectsContext';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { PageHeading, ServiceIcon, useDocumentTitle } from '../components/ui';
@@ -17,11 +17,20 @@ export function SettingsPage() {
   const { activeProject: project, deleteProject } = useProjects();
   const navigate = useNavigate();
   const [confirming, setConfirming] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
   if (!project) return <Navigate to="/projects" replace />;
 
-  function confirmDelete() {
-    deleteProject();
-    navigate('/projects', { replace: true });
+  async function confirmDelete() {
+    if (deleting) return;
+    setDeleting(true);
+    setDeleteError('');
+    try {
+      await deleteProject();
+      navigate('/projects', { replace: true });
+    } catch (error) {
+      setDeleteError(error instanceof Error ? error.message : '프로젝트를 삭제하지 못했습니다.');
+    } finally { setDeleting(false); }
   }
 
   return (
@@ -30,7 +39,7 @@ export function SettingsPage() {
       <div className={styles.sections}>
         {/* 헤더에서 프로젝트를 바꾸면 입력 중이던 값을 새 프로젝트 값으로 다시 채웁니다. */}
         <ProjectInfo key={project.id} project={project} />
-        <Connections project={project} />
+        <Connections key={`connections-${project.id}`} project={project} />
 
         <section className={styles.panel} aria-labelledby="danger-heading">
           <SectionHeader id="danger-heading" title="위험 영역" description="이 작업은 되돌릴 수 없습니다. 신중하게 진행해주세요." />
@@ -51,10 +60,13 @@ export function SettingsPage() {
         <ConfirmDialog
           title="프로젝트를 삭제할까요?"
           description={`‘${project.name}’ 프로젝트와 모든 Story가 삭제되고 되돌릴 수 없어요.`}
-          confirmLabel="삭제"
+          confirmLabel={deleting ? '삭제 중…' : '삭제'}
+          pending={deleting}
           onConfirm={confirmDelete}
           onCancel={() => setConfirming(false)}
-        />
+        >
+          {deleteError && <p className={form.error} role="alert">{deleteError}</p>}
+        </ConfirmDialog>
       )}
     </div>
   );
@@ -94,6 +106,9 @@ function ProjectInfo({ project }: { project: Project }) {
   const [nameError, setNameError] = useState('');
   const [savedField, setSavedField] = useState<InfoField | null>(null);
   const [saved, announceSaved, clearSaved] = useAnnouncement();
+  const saving = useRef(false);
+  const [pending, setPending] = useState(false);
+  const [saveError, setSaveError] = useState('');
 
   function change(field: InfoField, value: string) {
     setDraft((current) => ({ ...current, [field]: value }));
@@ -102,7 +117,8 @@ function ProjectInfo({ project }: { project: Project }) {
   }
 
   // blur나 Enter에서 바뀐 값만 저장합니다. 프로젝트명이 비어 있으면 저장하지 않고 오류를 보여줍니다.
-  function commit(field: InfoField) {
+  async function commit(field: InfoField) {
+    if (saving.current) return;
     const value = draft[field].trim();
     if (field === 'name' && !value) {
       setNameError('프로젝트명을 입력해주세요.');
@@ -110,9 +126,18 @@ function ProjectInfo({ project }: { project: Project }) {
     }
     setDraft((current) => ({ ...current, [field]: value }));
     if (value === project[field]) return;
-    updateProject({ name: project.name, description: project.description, [field]: value });
     setSavedField(field);
-    announceSaved('저장했어요.');
+    saving.current = true;
+    setPending(true);
+    setSaveError('');
+    announceSaved('저장 중…');
+    try {
+      await updateProject({ [field]: value });
+      announceSaved('저장했어요.');
+    } catch (error) {
+      clearSaved();
+      setSaveError(error instanceof Error ? error.message : '저장하지 못했습니다. 다시 시도해주세요.');
+    } finally { saving.current = false; setPending(false); }
   }
 
   function commitOnEnter(event: KeyboardEvent<HTMLInputElement>, field: InfoField) {
@@ -124,7 +149,8 @@ function ProjectInfo({ project }: { project: Project }) {
   return (
     <section className={styles.panel} aria-labelledby="info-heading">
       <SectionHeader id="info-heading" title="프로젝트 정보" description="프로젝트의 기본 정보를 수정할 수 있습니다." />
-      <div className={styles.fields}>
+      {saveError && <p className={form.error} role="alert">{saveError}</p>}
+      <fieldset className={`${styles.fields} ${styles.fieldset}`} disabled={pending} aria-busy={pending}>
         <div className={form.field}>
           <div className={form.labelRow}>
             <label htmlFor="settings-name" className={form.label}>프로젝트명 (필수)</label>
@@ -163,77 +189,62 @@ function ProjectInfo({ project }: { project: Project }) {
             onKeyDown={(event) => commitOnEnter(event, 'description')}
           />
         </div>
-      </div>
+      </fieldset>
     </section>
   );
 }
+
+const urlFields = { GitHub: 'github_url', Figma: 'figma_url', Notion: 'notion_url' } as const;
 
 function Connections({ project }: { project: Project }) {
-  const { setServiceConnection } = useProjects();
+  const { updateProject } = useProjects();
+  const [draft, setDraft] = useState(project.urls ?? { GitHub: '', Figma: '', Notion: '' });
+  const [pending, setPending] = useState<Service | null>(null);
+  const busy = useRef(false);
+  const [error, setError] = useState('');
   const [message, announce] = useAnnouncement();
 
-  function connect(service: Service, connected: boolean) {
-    const previous = project.services[service].status;
-    setServiceConnection(service, connected);
-    if (!connected) announce(`${service} 연결을 해제했어요.`);
-    else announce(previous === 'disconnected' ? `${service} 계정을 연결했어요.` : `${service} 계정을 다시 연결했어요.`);
+  async function save(service: Service, disconnect = false) {
+    if (busy.current) return;
+    const value = disconnect ? '' : draft[service].trim();
+    if (!disconnect) {
+      try {
+        const url = new URL(value);
+        const hosts = { GitHub: /(^|\.)github\.com$/, Figma: /(^|\.)figma\.com$/, Notion: /(^|\.)(notion\.so|notion\.site|notion\.com)$/ };
+        if (url.protocol !== 'https:' || !hosts[service].test(url.hostname)) throw new Error();
+      } catch { setError(service + '의 올바른 https URL을 입력해주세요.'); return; }
+    }
+    busy.current = true;
+    setPending(service);
+    setError('');
+    try {
+      await updateProject({ [urlFields[service]]: value || null });
+      setDraft(current => ({ ...current, [service]: value }));
+      announce(service + (disconnect ? ' URL을 해제했어요.' : ' URL을 저장했어요.'));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : '저장하지 못했습니다.');
+    } finally { busy.current = false; setPending(null); }
   }
 
-  return (
-    <section className={styles.panel} aria-labelledby="tools-heading">
-      <SectionHeader id="tools-heading" title="연결된 도구" description="프로젝트와 연결된 외부 도구를 관리할 수 있습니다." />
-      <div className={`${form.labelRow} ${styles.servicesLabel}`}>
-        <h3 id="services-heading" className={form.label}>연동된 서비스</h3>
-        <StatusText message={message} />
-      </div>
-      <ul className={styles.services} aria-labelledby="services-heading">
-        {settingServices.map((service) => (
-          <ServiceRow key={service} service={service} state={project.services[service]} onConnect={(connected) => connect(service, connected)} />
-        ))}
+  return <section className={styles.panel} aria-labelledby="tools-heading">
+    <SectionHeader id="tools-heading" title="연동 서비스" description="프로젝트에서 사용할 작업 도구의 URL을 관리합니다." />
+    <StatusText message={message} />
+    {error && <p className={form.error} role="alert">{error}</p>}
+    <fieldset className={styles.fieldset} disabled={pending !== null} aria-busy={pending !== null}>
+      <ul className={styles.services}>
+        {settingServices.map(service => <li key={service} className={styles.service}>
+          <div className={styles.serviceInfo}>
+            <label htmlFor={'settings-url-' + service} className={styles.serviceName}><ServiceIcon service={service} />{service}</label>
+            <input id={'settings-url-' + service} type="url" inputMode="url" autoComplete="off" spellCheck={false}
+              className={form.input} placeholder={service + ' URL 입력'} value={draft[service]}
+              onChange={event => { setDraft(current => ({ ...current, [service]: event.target.value })); setError(''); }} />
+          </div>
+          <div className={styles.serviceActions}>
+            <button type="button" className={styles.smallButton} onClick={() => void save(service)}>{pending === service ? '저장 중…' : '저장'}</button>
+            {project.urls?.[service] && <button type="button" className={styles.smallButton} onClick={() => void save(service, true)}>연결 해제</button>}
+          </div>
+        </li>)}
       </ul>
-    </section>
-  );
-}
-
-const statusTexts: Record<ServiceState['status'], (service: Service) => string> = {
-  connected: (service) => `${service} 계정이 연결되어 있습니다.`,
-  reconnect: () => '다시 연결이 필요합니다.',
-  disconnected: () => '연결되어 있지 않습니다.',
-};
-
-function ServiceRow({ service, state, onConnect }: { service: Service; state: ServiceState; onConnect: (connected: boolean) => void }) {
-  const connectButton = useRef<HTMLButtonElement>(null);
-  const { status } = state;
-
-  // 연결 해제 버튼이 사라지므로 같은 줄의 연결 버튼으로 포커스를 옮깁니다.
-  function disconnect() {
-    onConnect(false);
-    connectButton.current?.focus();
-  }
-
-  return (
-    <li className={styles.service}>
-      <div className={styles.serviceInfo}>
-        <p className={styles.serviceName}>
-          <ServiceIcon service={service} />
-          {service}
-        </p>
-        <p className={`${styles.serviceStatus} ${status === 'connected' ? '' : styles[status]}`}>{statusTexts[status](service)}</p>
-      </div>
-      <div className={styles.serviceActions}>
-        <button
-          ref={connectButton}
-          type="button"
-          className={`${styles.smallButton} ${status === 'connected' ? '' : styles.emphasis}`}
-          aria-label={`${service} ${status === 'disconnected' ? '연결' : '재연결'}`}
-          onClick={() => onConnect(true)}
-        >
-          {status === 'disconnected' ? '연결' : '재연결'}
-        </button>
-        {status !== 'disconnected' && (
-          <button type="button" className={`${styles.smallButton} ${styles.disconnect}`} aria-label={`${service} 연결 해제`} onClick={disconnect}>연결 해제</button>
-        )}
-      </div>
-    </li>
-  );
+    </fieldset>
+  </section>;
 }
