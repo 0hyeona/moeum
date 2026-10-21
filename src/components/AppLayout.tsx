@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router';
 import logo from '../../assets/moeum-logo-header.svg';
 import chevronDown from '../../assets/icons/chevron-down.svg';
 import { useProjects } from '../state/ProjectsContext';
+import { PageGuide } from './PageGuide';
 import styles from './AppLayout.module.css';
 
 const navigation = [
@@ -41,6 +42,7 @@ export function AppLayout({ header }: { header: 'centered' | 'project' }) {
       <main className={styles.main}>
         <Outlet />
       </main>
+      <PageGuide key={pathname} pathname={pathname} />
     </div>
   );
 }

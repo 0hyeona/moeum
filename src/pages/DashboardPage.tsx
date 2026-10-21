@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { Link, Navigate } from 'react-router';
 import { services, type ServiceState } from '../data/projects';
 import { useProjects } from '../state/ProjectsContext';
 import { StoryCard } from '../components/StoryCard';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Badge, ServiceIcon, useDocumentTitle } from '../components/ui';
 import form from '../components/form.module.css';
 import ui from '../components/ui.module.css';
@@ -10,7 +12,9 @@ import styles from './DashboardPage.module.css';
 export function DashboardPage() {
   useDocumentTitle('대시보드');
   const { activeProject: project, selectRepository } = useProjects();
+  const [pendingRepository, setPendingRepository] = useState<{ projectId: string; name: string } | null>(null);
   if (!project) return <Navigate to="/projects" replace />;
+  const repositoryLocked = project.selectedRepository !== null;
 
   return (
     <div className={styles.page}>
@@ -38,17 +42,19 @@ export function DashboardPage() {
         <section className={`${styles.panel} ${styles.repositories}`} aria-labelledby="repository-heading">
           <h2 id="repository-heading">Repository 선택</h2>
           {project.repositories.length > 0 ? (
-            <div className={styles.repositoryList} role="radiogroup" aria-labelledby="repository-heading">
+            <fieldset className={styles.repositoryList} disabled={repositoryLocked} aria-labelledby="repository-heading" aria-describedby={repositoryLocked ? 'repository-status' : undefined}>
+              <legend className={ui.visuallyHidden}>레퍼지토리 선택</legend>
               {project.repositories.map((repository) => (
-                <label key={repository} className={styles.repository}>
-                  <input type="radio" name="repository" className={form.radio} value={repository} checked={project.selectedRepository === repository} onChange={() => selectRepository(repository)} />
+                <label key={repository} className={`${styles.repository} ${repositoryLocked ? styles.repositoryDisabled : ''}`}>
+                  <input type="radio" name="repository" className={form.radio} value={repository} checked={project.selectedRepository === repository} onChange={() => setPendingRepository({ projectId: project.id, name: repository })} />
                   <span>{repository}</span>
                 </label>
               ))}
-            </div>
+            </fieldset>
           ) : (
             <p className={styles.empty}>연결된 Repository가 없어요.</p>
           )}
+          {repositoryLocked && <p id="repository-status" className={styles.repositoryStatus} role="status">선택 완료 · 레퍼지토리는 변경할 수 없어요.</p>}
         </section>
       </div>
 
@@ -112,6 +118,14 @@ export function DashboardPage() {
           )}
         </section>
       </div>
+      {pendingRepository?.projectId === project.id && !repositoryLocked && <ConfirmDialog
+        title="이 레퍼지토리를 선택할까요?"
+        description="선택한 레퍼지토리는 이후 변경할 수 없어요. 프로젝트에 사용할 항목이 맞는지 확인해주세요."
+        confirmLabel="선택 확정"
+        tone="primary"
+        onConfirm={() => { selectRepository(pendingRepository.name); setPendingRepository(null); }}
+        onCancel={() => setPendingRepository(null)}
+      >{pendingRepository.name}</ConfirmDialog>}
     </div>
   );
 }

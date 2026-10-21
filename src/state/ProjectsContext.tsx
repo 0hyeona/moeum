@@ -108,7 +108,10 @@ function useProjectsState() {
   }
 
   function selectRepository(repository: string) {
-    updateActive((project) => ({ ...project, selectedRepository: repository }));
+    // 최초 확정 후에는 UI 이외의 호출로도 선택을 덮어쓰지 않습니다.
+    updateActive((project) => project.selectedRepository || !project.repositories.includes(repository)
+      ? project
+      : { ...project, selectedRepository: repository });
   }
 
   function toggleChange(id: string) {
