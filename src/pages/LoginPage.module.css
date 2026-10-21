@@ -25,6 +25,33 @@
 .actions { display: flex; flex-direction: column; gap: 32px; }
 .localLogin { display: flex; flex-direction: column; gap: 16px; }
 .form { display: flex; flex-direction: column; gap: 16px; }
+.fieldset { display: flex; flex-direction: column; gap: 16px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.field p { margin: 0; font-size: 16px; line-height: 1.4; }
+.hint { margin: 0; font-size: 16px; line-height: 1.4; color: var(--color-muted); }
+.fieldError { color: var(--color-negative); }
+.success { color: var(--color-positive); }
+.result { display: flex; flex-direction: column; gap: 8px; }
+.result p { margin: 0; line-height: 1.4; }
+.deliveryNotice { margin: 0; padding: 12px 14px; border-radius: 8px; background: var(--color-selected); color: var(--color-link); font-size: 13px; line-height: 20px; }
+.deliveryHelp { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; padding-top: 20px; border-top: 1px solid var(--color-border); }
+.helpTitle { margin: 0; color: var(--color-text); font-size: 14px; line-height: 20px; font-weight: 600; }
+.helpDescription { margin: 0; color: var(--color-muted); font-size: 13px; line-height: 20px; word-break: keep-all; }
+.deliveryActions { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 4px; }
+.resendButton { min-height: 40px; padding: 8px 12px; border: 1px solid var(--color-border-strong); border-radius: var(--radius-control); background: var(--color-surface); color: var(--color-text); font-size: 13px; line-height: 20px; }
+.resendButton:hover:enabled { border-color: var(--color-primary); color: var(--color-link); }
+.resendButton:disabled { color: var(--color-muted); background: var(--color-background); cursor: not-allowed; }
+.changeEmailButton { min-height: 40px; padding: 8px 0; border: 0; background: transparent; color: var(--color-muted); font-size: 13px; line-height: 20px; text-decoration: underline; text-underline-offset: 3px; }
+.accountFooter { display: flex; justify-content: center; gap: 16px; padding-top: 16px; border-top: 1px solid var(--color-border); }
+.accountFooter a, .accountFooter button { padding: 0; border: 0; background: transparent; color: var(--color-muted); font-size: 13px; line-height: 20px; text-decoration: none; }
+.accountFooter a:hover, .accountFooter button:hover { color: var(--color-link); text-decoration: underline; text-underline-offset: 3px; }
+.accountFooter [aria-disabled='true'], .accountFooter button:disabled { opacity: .65; cursor: wait; }
+.pendingContent { position: relative; width: 100%; }
+.concealed { visibility: hidden; }
+.pendingOverlay { position: absolute; inset: 0; pointer-events: none; }
+.srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.intro h1[tabindex='-1']:focus { outline: none; }
+.backLink { text-align: center; color: var(--color-primary); }
+.primaryButton:disabled, .githubButton:disabled { opacity: .65; cursor: wait; }
 .field { display: flex; flex-direction: column; gap: 5px; }
 .field label { color: var(--color-muted); font-size: 16px; line-height: 22px; }
 .field input {
@@ -32,7 +59,7 @@
   height: 56px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-control);
-  padding: 16px 32px;
+  padding: 16px;
   background: var(--color-surface);
   color: var(--color-text);
   font-size: 16px;
@@ -44,7 +71,7 @@
 .field input:focus { border-color: var(--color-primary); }
 .field input[aria-invalid='true'] { border-color: var(--color-error); }
 .error { margin: 0; font-size: 13px; line-height: 20px; color: var(--color-error); }
-.primaryButton, .githubButton {
+.primaryButton, .githubButton, .primaryLink {
   width: 100%;
   min-height: 56px;
   padding: 16px 24px;
@@ -54,12 +81,16 @@
   line-height: 24px;
   transition: background-color 150ms, transform 150ms;
 }
-.primaryButton { background: var(--color-primary); color: #fff; }
-.primaryButton:hover { background: var(--color-primary-hover); }
+.primaryButton, .primaryLink { background: var(--color-primary); color: #fff; }
+.primaryButton:hover, .primaryLink:hover { background: var(--color-primary-hover); }
+.primaryLink { display: flex; align-items: center; justify-content: center; text-decoration: none; }
+.outlined { background: var(--color-selected); color: var(--color-primary); box-shadow: inset 0 0 0 1px var(--color-primary); }
+.outlined:hover { color: #fff; }
 .primaryButton:active, .githubButton:active { transform: translateY(1px); }
 .accountLinks { display: flex; gap: 16px; align-items: center; justify-content: center; }
-.accountLinks button { border: 0; background: none; padding: 0; color: var(--color-muted); font-size: 16px; line-height: 22px; white-space: nowrap; }
-.accountLinks button:hover { text-decoration: underline; text-underline-offset: 4px; }
+.accountLinks button, .accountLinks a { border: 0; background: none; padding: 0; color: var(--color-muted); font-size: 16px; line-height: 22px; white-space: nowrap; text-decoration: none; }
+.accountLinks button:hover, .accountLinks a:hover { text-decoration: underline; text-underline-offset: 4px; }
+.accountLinks button:disabled, .accountLinks a[aria-disabled='true'] { opacity: .65; cursor: wait; }
 .accountLinks .signup { color: var(--color-primary); }
 .githubButton { background: #3d3d3f; color: #edf4ff; display: flex; gap: 16px; align-items: center; justify-content: center; }
 .githubButton:hover { background: #29292b; }
@@ -77,6 +108,6 @@
   .intro h1 { font-size: 18px; line-height: 26px; }
   .field input { padding-inline: 16px; }
   .accountLinks { gap: 12px; }
-  .accountLinks button { font-size: 14px; }
+  .accountLinks button, .accountLinks a { font-size: 14px; }
   .terms { font-size: 13px; line-height: 20px; }
 }

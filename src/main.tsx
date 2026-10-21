@@ -2,9 +2,12 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
 import { AppLayout } from './components/AppLayout';
+import { AuthBoundary } from './components/AuthBoundary';
 import { ChangesPage } from './pages/ChangesPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { LoginPage } from './pages/LoginPage';
+import { AccountPage } from './pages/AccountPage';
+import { GithubCallbackPage } from './pages/GithubCallbackPage';
 import { ProjectCreatePage } from './pages/ProjectCreatePage';
 import { ProjectListPage } from './pages/ProjectListPage';
 import { SettingsPage } from './pages/SettingsPage';
@@ -22,11 +25,14 @@ createRoot(document.getElementById('root')!).render(
         <Routes>
           <Route path="/" element={<LoginPage />} />
           <Route path="/login" element={<LoginPage />} />
-          <Route element={<AppLayout header="centered" />}>
+          <Route path="/signup" element={<AccountPage key="signup" mode="signup" />} />
+          <Route path="/auth/github/callback" element={<GithubCallbackPage />} />
+          <Route path="/password-reset" element={<AccountPage key="password" mode="password" />} />
+          <Route element={<AuthBoundary><AppLayout header="centered" /></AuthBoundary>}>
             <Route path="/projects" element={<ProjectListPage />} />
             <Route path="/projects/new" element={<ProjectCreatePage />} />
           </Route>
-          <Route element={<AppLayout header="project" />}>
+          <Route element={<AuthBoundary><AppLayout header="project" /></AuthBoundary>}>
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/changes" element={<ChangesPage />} />
             <Route path="/stories/analysis" element={<StoryAnalysisPage />} />
