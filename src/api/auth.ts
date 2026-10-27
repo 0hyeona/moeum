@@ -58,8 +58,16 @@ export async function login(credentials: LoginRequest): Promise<LoginResponse> {
 }
 
 export function startGithubLogin(): void {
-  if (!API_BASE_URL) throw new Error('API 서버 주소를 설정해주세요.');
-  window.location.assign(`${API_BASE_URL}/api/auth/github/login`);
+  const githubBackendUrl =
+    import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/+$/, '');
+
+  if (!githubBackendUrl) {
+    throw new Error('GitHub 로그인 서버 주소를 설정해주세요.');
+  }
+
+  window.location.assign(
+    `${githubBackendUrl}/api/auth/github/login`
+  );
 }
 
 // 같은 콜백 코드를 React StrictMode에서 두 번 교환하지 않습니다.
