@@ -1,15 +1,63 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { createAnalysis, sampleProjects, todayLabel, type Analysis, type AnalysisMode, type Project, type Service, type ServiceState, type Story, type StoryFields } from '../data/projects';
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { createAnalysis, todayLabel, type Analysis, type AnalysisMode, type Project, type Service, type Story, type StoryFields } from '../data/projects';
+import * as projectApi from '../api/projects';
+import { SessionSkeleton } from '../components/Skeleton';
+import boundaryStyles from '../components/AuthBoundary.module.css';
+import { useAuth } from './AuthContext';
+import { Navigate } from 'react-router';
+import { ApiError } from '../api/client';
+import { clearAccessToken } from '../api/auth';
 
-export type NewProject = { name: string; description: string; connected: Service[] };
+export type NewProject = { name: string; description: string; urls: Record<Service, string> };
 
 const todaysChangeIds = (project: Project | undefined) => project?.changes.filter((change) => change.daysAgo === 0).map((change) => change.id) ?? [];
 
 function useProjectsState() {
-  const [projects, setProjects] = useState(sampleProjects);
-  const [activeProjectId, setActiveProjectId] = useState<string | null>(sampleProjects[0].id);
+  const { user } = useAuth();
+  const selectionKey = `moeum.active-project.${user.id}`;
+  const mutationQueue = useRef<Promise<unknown>>(Promise.resolve());
+  function enqueue<T>(task: () => Promise<T>): Promise<T> {
+    const result = mutationQueue.current.then(task, task);
+    mutationQueue.current = result.catch(() => undefined);
+    return result;
+  }
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [expired, setExpired] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    setLoadError('');
+    projectApi.listProjects(controller.signal).then(data => {
+      if (controller.signal.aborted) return;
+      const next = data.map(item => projectApi.toProject(item));
+      setProjects(next);
+      let remembered: string | null = null;
+      try { remembered = sessionStorage.getItem(selectionKey); } catch { /* Selection storage is optional. */ }
+      setActiveProjectId(next.find(project => project.id === remembered)?.id ?? next[0]?.id ?? null);
+    }).catch(error => {
+      if (!controller.signal.aborted && error instanceof ApiError && error.status === 401) {
+        clearAccessToken();
+        setExpired(true);
+      }
+      if (!controller.signal.aborted) setLoadError(error instanceof Error ? error.message : '프로젝트를 불러오지 못했습니다.');
+    }).finally(() => {
+      if (!controller.signal.aborted) setLoading(false);
+    });
+    return () => controller.abort();
+  }, [attempt, selectionKey]);
+  useEffect(() => {
+    if (loading || loadError) return;
+    try {
+      if (activeProjectId) sessionStorage.setItem(selectionKey, activeProjectId);
+      else sessionStorage.removeItem(selectionKey);
+    } catch { /* Selection storage is optional. */ }
+  }, [activeProjectId, loading, loadError, selectionKey]);
   // s5에서 고른 변경사항과 분석 방식, s6 분석 결과. 프로젝트를 바꾸면 초기화됩니다.
-  const [selectedChangeIds, setSelectedChangeIds] = useState(() => todaysChangeIds(sampleProjects[0]));
+  const [selectedChangeIds, setSelectedChangeIds] = useState<string[]>([]);
   const [mode, setMode] = useState<AnalysisMode>('의미 중심');
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [storyDrafts, setStoryDrafts] = useState<Record<string, Record<string, Partial<StoryFields>>>>({});
@@ -58,21 +106,10 @@ function useProjectsState() {
     setAnalysis(null);
   }
 
-  function createProject({ name, description, connected }: NewProject) {
-    const state = (service: Service): ServiceState => connected.includes(service) ? { status: 'connected' } : { status: 'disconnected' };
-    const project: Project = {
-      id: crypto.randomUUID(),
-      name,
-      description,
-      status: '진행 중',
-      updatedAt: '방금',
-      services: { GitHub: state('GitHub'), Figma: state('Figma'), Notion: state('Notion') },
-      repositories: [],
-      selectedRepository: null,
-      changes: [],
-      stories: [],
-      commits: [],
-    };
+  async function createProject({ name, description, urls }: NewProject) {
+    const data = await projectApi.createProject({ project_name: name, description,
+      github_url: urls.GitHub || null, figma_url: urls.Figma || null, notion_url: urls.Notion || null });
+    const project = projectApi.toProject(data);
     setProjects((current) => [project, ...current]);
     setActiveProjectId(project.id);
     setSelectedChangeIds([]);
@@ -80,18 +117,19 @@ function useProjectsState() {
     setAnalysis(null);
   }
 
-  function updateProject(fields: Pick<Project, 'name' | 'description'>) {
-    updateActive((project) => ({ ...project, ...fields }));
-  }
-
-  function setServiceConnection(service: Service, connected: boolean) {
-    updateActive((project) => {
-      const next: ServiceState = connected ? { status: 'connected' } : { status: 'disconnected' };
-      return { ...project, services: { ...project.services, [service]: next } };
+  async function updateProject(fields: Partial<Pick<Project, 'name' | 'description'>> & Partial<Pick<projectApi.ProjectInput, 'github_url' | 'figma_url' | 'notion_url'>>) {
+    if (!activeProjectId) throw new Error('프로젝트를 선택해주세요.');
+    const { name, ...rest } = fields;
+    const id = activeProjectId;
+    await enqueue(async () => {
+      const data = await projectApi.updateProject(id, { ...rest, ...(name === undefined ? {} : { project_name: name }) });
+      setProjects(current => current.map(project => project.id === String(data.id) ? projectApi.toProject(data, project) : project));
     });
   }
 
-  function deleteProject() {
+  async function deleteProject() {
+    if (!activeProjectId) throw new Error('프로젝트를 선택해주세요.');
+    await enqueue(() => projectApi.deleteProject(activeProjectId));
     if (activeProjectId) {
       setStoryDrafts((current) => {
         const next = { ...current };
@@ -100,7 +138,7 @@ function useProjectsState() {
       });
     }
     const remaining = projects.filter((project) => project.id !== activeProjectId);
-    setProjects(remaining);
+    setProjects(current => current.filter(project => project.id !== activeProjectId));
     setActiveProjectId(remaining[0]?.id ?? null);
     setSelectedChangeIds(todaysChangeIds(remaining[0]));
     setMode('의미 중심');
@@ -108,7 +146,10 @@ function useProjectsState() {
   }
 
   function selectRepository(repository: string) {
-    updateActive((project) => ({ ...project, selectedRepository: repository }));
+    // 최초 확정 후에는 UI 이외의 호출로도 선택을 덮어쓰지 않습니다.
+    updateActive((project) => project.selectedRepository || !project.repositories.includes(repository)
+      ? project
+      : { ...project, selectedRepository: repository });
   }
 
   function toggleChange(id: string) {
@@ -159,12 +200,12 @@ function useProjectsState() {
   }
 
   return {
+    loading, loadError, expired, retry: () => setAttempt(value => value + 1),
     projects,
     activeProject,
     selectProject,
     createProject,
     updateProject,
-    setServiceConnection,
     deleteProject,
     selectRepository,
     selectedChangeIds,
@@ -186,6 +227,11 @@ const ProjectsContext = createContext<ReturnType<typeof useProjectsState> | null
 
 export function ProjectsProvider({ children }: { children: ReactNode }) {
   const value = useProjectsState();
+  if (value.expired) return <Navigate to="/login" replace />;
+  if (value.loading) return <SessionSkeleton />;
+  if (value.loadError) return <main className={boundaryStyles.loading}>
+    <p role="alert">{value.loadError}</p><button type="button" onClick={value.retry}>다시 시도</button>
+  </main>;
   return <ProjectsContext.Provider value={value}>{children}</ProjectsContext.Provider>;
 }
 

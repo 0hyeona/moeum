@@ -24,7 +24,7 @@
 
 /* Repository 선택: 목록은 옆 패널 높이에 맞춰 늘어나고 넘치면 스크롤됩니다. */
 .repositories { display: flex; flex-direction: column; padding-bottom: 2px; }
-.repositoryList { flex: 1 1 auto; height: 0; margin-top: 8px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+.repositoryList { flex: 1 1 auto; min-width: 0; height: 0; margin: 8px 0 0; padding: 0; border: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
 .repository {
   flex: none;
   display: flex;
@@ -43,6 +43,11 @@
 .repository:hover { border-color: var(--color-primary); }
 .repository:has(:checked) { border-color: var(--color-primary); background: var(--color-selected); }
 .repository span { min-width: 0; overflow-wrap: anywhere; }
+.repositoryDisabled { cursor: not-allowed; color: var(--color-placeholder); background: var(--color-background); }
+.repositoryDisabled:hover { border-color: var(--color-border); }
+.repositoryDisabled:has(:checked) { border-color: var(--color-primary); background: var(--color-selected); color: var(--color-link); }
+.repositoryDisabled input { cursor: not-allowed; opacity: .55; }
+.repositoryStatus { margin: 12px 0 16px; color: var(--color-muted); font-size: 13px; line-height: 20px; }
 
 /* 최근 Story */
 .stories { margin: 32px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 16px; }

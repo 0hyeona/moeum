@@ -1,8 +1,8 @@
 .app { min-height: 100svh; display: flex; flex-direction: column; background: var(--color-background); color: var(--color-text-strong); }
 .headerBar { background: var(--color-surface); position: relative; z-index: 10; }
-.header { position: relative; max-width: 1920px; height: 100px; margin-inline: auto; padding-right: 48px; display: flex; align-items: center; gap: 16px; }
-.centered { padding-right: 0; justify-content: center; }
-.logo { width: 192px; height: 100px; flex: none; display: flex; align-items: center; justify-content: center; }
+.header { position: relative; max-width: 1920px; height: 100px; margin-inline: auto; padding-inline: 48px; display: flex; align-items: center; gap: 24px; }
+.centered .logo { position: absolute; left: 50%; transform: translateX(-50%); }
+.logo { width: 96px; height: 100px; flex: none; display: flex; align-items: center; justify-content: center; }
 .logo img { display: block; }
 .main { width: 100%; max-width: 1920px; margin-inline: auto; flex: 1; }
 
@@ -30,21 +30,22 @@
 .menu button[aria-current='true'] { color: var(--color-primary); font-weight: 700; }
 .menuLink { margin-top: 8px; border-top: 1px solid var(--color-border); border-radius: 0 0 6px 6px; color: var(--color-muted); }
 
-/* 프로젝트명 길이와 상관없이 메뉴 위치가 고정되도록 로고+프로젝트 메뉴 영역(343px) 오른쪽 공간의 가운데에 둡니다. */
-.navigation { position: absolute; inset: 0 48px 0 343px; display: flex; align-items: center; justify-content: center; gap: 96px; font-size: 20px; line-height: 24px; font-weight: 700; pointer-events: none; }
+.navigation { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; gap: clamp(24px, 5vw, 96px); font-size: 20px; line-height: 24px; font-weight: 700; }
 .navigation a { pointer-events: auto; padding: 8px 0; color: inherit; text-decoration: none; white-space: nowrap; transition: color 150ms; }
 .navigation a:hover, .navigation .active { color: var(--color-primary); }
 
 @media (max-width: 1100px) {
-  .navigation { position: static; flex: 1; gap: 48px; pointer-events: auto; }
+  .header { gap: 16px; }
+  .projectButton { max-width: 220px; }
+  .navigation { gap: 24px; font-size: 18px; }
 }
 @media (max-width: 760px) {
   .header { height: auto; min-height: 72px; padding: 0 16px 8px; flex-wrap: wrap; gap: 0 8px; }
-  .centered { min-height: 100px; padding: 0; }
+  .centered { min-height: 100px; padding: 0 16px; }
   .header:not(.centered) .logo { width: auto; height: 72px; margin-right: 8px; }
-  .projectButton { font-size: 16px; max-width: 200px; }
+  .projectButton { font-size: 16px; max-width: min(200px, calc(100vw - 208px)); }
   /* 좁은 화면에서는 프로젝트 이름 위치와 상관없이 화면 안에 들어오도록 헤더 왼쪽 여백에 맞춰 엽니다. */
   .projectMenu { position: static; }
   .menu { top: 64px; left: 16px; z-index: 1; width: min(260px, calc(100vw - 32px)); }
-  .navigation { flex-basis: 100%; justify-content: space-around; gap: 16px; font-size: 16px; }
+  .navigation { order: 1; flex-basis: 100%; justify-content: space-around; gap: 16px; font-size: 16px; }
 }

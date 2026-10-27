@@ -6,8 +6,6 @@ import { PageHeading, ServiceIcon, useDocumentTitle } from '../components/ui';
 import ui from '../components/ui.module.css';
 import styles from './ProjectCreatePage.module.css';
 
-// 실제 Notion 연동 전까지 선택지로 보여주는 예시 페이지입니다.
-const notionPages = ['모음 기획 문서', '주간 회의록', '디자인 시스템 가이드'];
 
 function isFigmaFileUrl(value: string) {
   try {
@@ -31,6 +29,8 @@ export function ProjectCreatePage() {
   const [notionPage, setNotionPage] = useState('');
   const [notionError, setNotionError] = useState('');
   const [connected, setConnected] = useState<Service[]>([]);
+  const [pending, setPending] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   function setConnection(service: Service, on: boolean) {
     setConnected((current) => on ? [...current.filter((item) => item !== service), service] : current.filter((item) => item !== service));
@@ -43,26 +43,39 @@ export function ProjectCreatePage() {
   }
 
   function connectNotion() {
-    setNotionError(notionPage ? '' : '연결할 페이지를 선택해주세요.');
-    setConnection('Notion', !!notionPage);
+    let valid = false;
+    try { const url = new URL(notionPage.trim()); valid = url.protocol === 'https:' && /(^|\.)(notion\.so|notion\.site|notion\.com)$/.test(url.hostname); } catch { /* Invalid URL. */ }
+    setNotionError(valid ? '' : '올바른 Notion 페이지 URL을 입력해주세요.');
+    setConnection('Notion', valid);
   }
 
-  function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (pending) return;
     if (!name.trim()) {
       setNameError('프로젝트명을 입력해주세요.');
       nameInput.current?.focus();
       return;
     }
-    createProject({ name: name.trim(), description: description.trim(), connected });
-    navigate('/dashboard');
+    if ((figmaUrl.trim() && !connected.includes('Figma')) || (notionPage.trim() && !connected.includes('Notion'))) {
+      setSubmitError('입력한 URL의 연결 버튼을 눌러 확인해주세요.');
+      return;
+    }
+    setPending(true);
+    setSubmitError('');
+    try {
+      await createProject({ name: name.trim(), description: description.trim(), urls: { GitHub: '', Figma: figmaUrl.trim(), Notion: notionPage.trim() } });
+      navigate('/dashboard');
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : '프로젝트를 생성하지 못했습니다.');
+    } finally { setPending(false); }
   }
 
   return (
     <div className={styles.page}>
       <PageHeading title="프로젝트 생성" description="새로운 프로젝트와 작업 도구를 연결해주세요." />
       <form className={styles.form} onSubmit={submit} noValidate>
-        <div className={styles.panel}>
+        <fieldset className={styles.panel} disabled={pending}>
           <div className={styles.field}>
             <label htmlFor="project-name">프로젝트명 (필수)</label>
             <input ref={nameInput} id="project-name" className={styles.input} placeholder="flowlog" maxLength={50} autoComplete="off" value={name} onChange={(event) => { setName(event.target.value); setNameError(''); }} aria-invalid={!!nameError} aria-describedby={nameError ? 'project-name-error' : undefined} required />
@@ -77,14 +90,12 @@ export function ProjectCreatePage() {
               <input id="figma-url" className={styles.input} type="url" inputMode="url" placeholder="URL 입력" autoComplete="off" spellCheck={false} value={figmaUrl} onChange={(event) => { setFigmaUrl(event.target.value); setFigmaError(''); setConnection('Figma', false); }} aria-invalid={!!figmaError} aria-describedby={figmaError ? 'figma-url-error' : undefined} />
             </Connection>
             <Connection service="Notion" controlId="notion-page" connected={connected.includes('Notion')} error={notionError} onConnect={connectNotion}>
-              <select id="notion-page" className={`${styles.input} ${styles.select} ${notionPage ? '' : styles.placeholder}`} value={notionPage} onChange={(event) => { setNotionPage(event.target.value); setNotionError(''); setConnection('Notion', false); }} aria-invalid={!!notionError} aria-describedby={notionError ? 'notion-page-error' : undefined}>
-                <option value="" disabled>페이지 선택</option>
-                {notionPages.map((page) => <option key={page} value={page}>{page}</option>)}
-              </select>
+              <input id="notion-page" className={styles.input} type="url" inputMode="url" placeholder="Notion 페이지 URL 입력" autoComplete="off" value={notionPage} onChange={(event) => { setNotionPage(event.target.value); setNotionError(''); setConnection('Notion', false); }} aria-invalid={!!notionError} aria-describedby={notionError ? 'notion-page-error' : undefined} />
             </Connection>
           </div>
-        </div>
-        <button type="submit" className={ui.primaryButton}>프로젝트 생성</button>
+        </fieldset>
+        {submitError && <p className={styles.error} role="alert">{submitError}</p>}
+        <button type="submit" className={ui.primaryButton} disabled={pending}>{pending ? '생성 중…' : '프로젝트 생성'}</button>
       </form>
     </div>
   );
