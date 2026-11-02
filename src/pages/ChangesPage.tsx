@@ -52,7 +52,7 @@ function matchesQuery(change: Change, query: string) {
 
 export function ChangesPage() {
   useDocumentTitle('변경사항 선택');
-  const { activeProject: project, selectedChangeIds, toggleChange, mode, setMode, analyze } = useProjects();
+  const { activeProject: project, selectedChangeIds, toggleChange, mode, setMode, analyze, activityStates, refreshActivities } = useProjects();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [query, setQuery] = useState('');
@@ -75,6 +75,8 @@ export function ChangesPage() {
 
   const serviceParam = searchParams.get('service');
   const service = isService(serviceParam) ? serviceParam : 'all';
+  const visibleServices = services.filter(item => service === 'all' || item === service);
+  const waiting = visibleServices.some(item => ['pending', 'loading', 'error', 'disconnected'].includes(activityStates[item].status));
   const statusOptions: FilterOption<string>[] = [
     { value: 'all', label: '상태 전체' },
     ...[...new Set(project.changes.map((change) => change.status))].map((value) => ({ value, label: value })),
@@ -160,7 +162,18 @@ export function ChangesPage() {
             </button>
           )}
 
-          {project.changes.length === 0 ? (
+          {visibleServices.map(item => {
+            const state = activityStates[item];
+            if (state.status === 'ready' && item === 'GitHub') return null;
+            return <div key={item} className={styles.serviceNotice} role={state.status === 'error' ? 'alert' : 'status'}>
+              <ServiceIcon service={item} />
+              <span>{item}: {state.status === 'loading' ? '변경사항을 수집·조회하고 있어요…' : state.status === 'pending' ? '변경사항 조회를 준비하고 있어요.' : state.status === 'disconnected' ? '연결된 주소가 없어요.' : state.status === 'ready' ? `수집 완료 · 미정리 변경사항 ${project.changes.filter(change => change.service === item).length}개` : state.error}</span>
+              {state.status === 'error' && <button type="button" className={styles.textButton} onClick={() => refreshActivities(item)}>다시 시도</button>}
+              {item !== 'GitHub' && (state.status === 'ready' || state.status === 'loading') && <button type="button" className={styles.textButton} disabled={state.status === 'loading'} onClick={() => refreshActivities(item)}>새로고침</button>}
+              {state.status === 'disconnected' && <Link className={styles.textButton} to={'/settings#settings-url-' + item}>연결하기</Link>}
+            </div>;
+          })}
+          {visibleChanges.length === 0 && waiting && !shownChanges.some(change => service === 'all' || change.service === service) ? null : project.changes.length === 0 ? (
             <div className={styles.empty}>
               <p>아직 수집된 변경사항이 없어요.</p>
               <Link to="/stories/new" className={styles.textButton}>Story 직접 작성하기</Link>

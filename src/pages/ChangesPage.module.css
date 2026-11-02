@@ -68,3 +68,6 @@
   .modes { margin-top: 20px; }
   .analyzeButton { align-self: stretch; margin-top: 0; }
 }
+
+.serviceNotice { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 16px; padding: 16px; border: 1px solid var(--color-border); border-radius: var(--radius-control); color: var(--color-muted); font-size: 16px; }
+.serviceNotice span { flex: 1; min-width: 180px; overflow-wrap: anywhere; }

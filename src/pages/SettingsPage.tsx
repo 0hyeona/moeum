@@ -2,6 +2,7 @@ import { useRef, useState, type KeyboardEvent } from 'react';
 import { Navigate, useNavigate } from 'react-router';
 import errorIcon from '../../assets/icons/error.svg';
 import type { Project, Service } from '../data/projects';
+import { githubRepository } from '../data/github';
 import { useProjects } from '../state/ProjectsContext';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { PageHeading, ServiceIcon, useDocumentTitle } from '../components/ui';
@@ -207,6 +208,10 @@ function Connections({ project }: { project: Project }) {
   async function save(service: Service, disconnect = false) {
     if (busy.current) return;
     const value = disconnect ? '' : draft[service].trim();
+    if (!disconnect && service === 'GitHub' && !githubRepository(value)) {
+      setError('https://github.com/소유자/저장소 형식의 URL을 입력해주세요.');
+      return;
+    }
     if (!disconnect) {
       try {
         const url = new URL(value);

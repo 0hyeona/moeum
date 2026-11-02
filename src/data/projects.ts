@@ -44,6 +44,7 @@ export type StoryFields = {
 };
 
 export type Story = StoryFields & {
+  sourceChangeIds?: string[];
   id: string;
   status: StoryStatus;
   sources: Service[]; // 출처(타임라인 필터)
@@ -51,6 +52,7 @@ export type Story = StoryFields & {
 };
 
 export type Commit = {
+  branch?: string;
   sha: string;
   message: string;
   date: string;
@@ -72,6 +74,7 @@ export type Project = {
   changes: Change[];
   stories: Story[]; // 최신순
   commits: Commit[];
+  branches?: string[];
 };
 
 // s6 AI Story 분석 결과. 실제 AI 대신 선택한 변경사항으로 예시 결과를 만듭니다.
@@ -110,6 +113,7 @@ const loginStory = story('login-ui', '완료', '2026.09.01', ['GitHub', 'Figma']
 export const sampleProjects: Project[] = [
   {
     id: 'moeum',
+    branches: ['main', 'develop', 'branch'],
     name: '모음',
     description: '프로젝트 변경사항을 수집하고 작업의 이유와 과정을 Story로 기록하는 프로젝트',
     status: '진행 중',

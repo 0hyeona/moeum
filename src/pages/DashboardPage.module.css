@@ -1,7 +1,6 @@
-.page { padding: 55px 48px 61px; display: flex; flex-direction: column; gap: 64px; }
-.topRow { display: grid; grid-template-columns: 701px minmax(0, 1fr); gap: 24px; }
-.bottomRow { display: grid; grid-template-columns: 594px minmax(0, 1fr); gap: 24px; align-items: start; }
-
+.page { padding: 48px; display: flex; flex-direction: column; gap: 48px; }
+.topRow { display: grid; grid-template-columns: minmax(0, 768fr) minmax(0, 1008fr); gap: 48px; align-items: stretch; }
+.bottomRow { min-width: 0; }
 .panel { min-width: 0; padding: 32px; border: 1px solid var(--color-border); border-radius: var(--radius-control); background: var(--color-surface); }
 .panel h2 { margin: 0; font-size: 25px; line-height: 30px; font-weight: 700; }
 .panelHeader { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
@@ -9,9 +8,8 @@
 .panelHeader a:hover { text-decoration: underline; text-underline-offset: 4px; }
 .empty { margin: 24px 0 0; padding: 32px 16px; border-radius: var(--radius-control); background: var(--color-background); color: var(--color-muted); text-align: center; word-break: keep-all; }
 
-/* 미정리 변경사항 조회 */
-.pending { display: flex; flex-direction: column; padding-bottom: 10px; }
-.stats { margin: 32px 0 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.pending { display: flex; flex-direction: column; min-height: 442px; }
+.stats { margin: 84px 0 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(3, minmax(0, 201px)); justify-content: center; align-items: end; gap: 16px; }
 .stat { display: flex; flex-direction: column; gap: 16px; padding: 16px 32px; border: 1px solid var(--color-border); border-radius: var(--radius-control); }
 .statService { display: flex; align-items: center; gap: 8px; font-size: 16px; line-height: 24px; }
 .count, .alert, .muted { align-self: flex-end; line-height: 30px; white-space: nowrap; }
@@ -21,68 +19,57 @@
 .alert { color: var(--color-alert); }
 .muted { color: var(--color-placeholder); }
 .storyButton { align-self: center; width: 200px; margin-top: 16px; }
-
-/* Repository 선택: 목록은 옆 패널 높이에 맞춰 늘어나고 넘치면 스크롤됩니다. */
-.repositories { display: flex; flex-direction: column; padding-bottom: 2px; }
-.repositoryList { flex: 1 1 auto; min-width: 0; height: 0; margin: 8px 0 0; padding: 0; border: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
-.repository {
-  flex: none;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 50px;
-  padding: 0 16px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-control);
-  color: var(--color-link);
-  font-size: 16px;
-  line-height: 22px;
-  cursor: pointer;
-  transition: border-color 150ms, background-color 150ms;
-}
-.repository:hover { border-color: var(--color-primary); }
-.repository:has(:checked) { border-color: var(--color-primary); background: var(--color-selected); }
-.repository span { min-width: 0; overflow-wrap: anywhere; }
-.repositoryDisabled { cursor: not-allowed; color: var(--color-placeholder); background: var(--color-background); }
-.repositoryDisabled:hover { border-color: var(--color-border); }
-.repositoryDisabled:has(:checked) { border-color: var(--color-primary); background: var(--color-selected); color: var(--color-link); }
-.repositoryDisabled input { cursor: not-allowed; opacity: .55; }
-.repositoryStatus { margin: 12px 0 16px; color: var(--color-muted); font-size: 13px; line-height: 20px; }
-
-/* 최근 Story */
 .stories { margin: 32px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 16px; }
+.storyCard { min-height: 94px; --story-card-summary-gap: 4px; --story-card-badge-padding: 4px; }
 
-/* 최근 GitHub 변경사항 */
-.commits { min-height: 392px; }
+.commits { min-height: 308px; }
+.branches { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 42px; }
+.branch { min-height: 28px; max-width: 100%; padding: 4px 8px; border: 1px solid var(--color-subtle); border-radius: var(--radius-control); background: rgb(238 239 242 / 60%); color: var(--color-muted); font-size: 13px; line-height: 18px; overflow-wrap: anywhere; }
+.branch:hover { border-color: var(--color-muted); }
+.branch[aria-pressed='true'] { background: #3d3d3f; border-color: #3d3d3f; color: var(--color-border); }
 .tableScroll { margin-top: 42px; overflow-x: auto; }
+.branches + .tableScroll { margin-top: 16px; }
 .table { width: 100%; min-width: 720px; border-collapse: collapse; table-layout: fixed; text-align: left; font-size: 16px; line-height: 22px; }
-.narrowColumn { width: 17.4%; }
-.messageColumn { width: 37.7%; }
-/* 행 높이 28px, 행 사이 24px: 텍스트 칸은 위아래 3px, 배지 칸은 0px 여백 */
-.table th, .table td { padding: 3px 24px 3px 0; vertical-align: top; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.table th { padding: 0 24px 24px 0; color: var(--color-subtle); font-weight: 400; }
+.narrowColumn { width: 16.5%; }
+.messageColumn { width: 40.1%; }
+.table th, .table td { padding: 0 24px 0 0; vertical-align: top; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.table th { padding-bottom: 24px; color: var(--color-subtle); font-weight: 400; }
 .table th:last-child, .table td:last-child { padding-right: 0; }
-.table td:last-child { padding-block: 0; }
-.table tbody tr + tr td { padding-top: 27px; }
-.table tbody tr + tr td:last-child { padding-top: 24px; }
+.table tbody tr + tr td { padding-top: 24px; }
 .additions { color: var(--color-positive); }
 .deletions { color: var(--color-negative); }
 
-@media (max-width: 1439px) {
+@media (max-width: 1599px) {
+  .topRow { grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 24px; }
+  .stat { padding-inline: 16px; }
+}
+@media (max-width: 1199px) {
   .page { gap: 24px; }
-  .topRow, .bottomRow { grid-template-columns: minmax(0, 1fr); }
-  .repositoryList { flex: none; height: auto; max-height: 266px; margin-bottom: 30px; }
+  .topRow { grid-template-columns: minmax(0, 1fr); }
+  .pending { min-height: 0; }
+  .stats { margin-top: 32px; }
   .commits { min-height: 0; }
 }
 @media (max-width: 700px) {
   .page { padding: 24px 16px 48px; gap: 16px; }
-  .topRow, .bottomRow { gap: 16px; }
+  .topRow { gap: 16px; }
   .panel { padding: 20px 16px; }
-  .pending { padding-bottom: 20px; }
   .panel h2 { font-size: 20px; line-height: 26px; }
+  .panelHeader { flex-wrap: wrap; gap: 8px 16px; }
   .panelHeader a { font-size: 14px; }
   .stats { grid-template-columns: minmax(0, 1fr); gap: 8px; margin-top: 20px; }
   .stat { flex-direction: row; justify-content: space-between; align-items: center; padding: 12px 16px; }
   .stories { margin-top: 20px; }
-  .tableScroll { margin-top: 24px; }
+  .branches, .tableScroll { margin-top: 24px; }
 }
+
+.githubEmpty { margin-top: 32px; min-height: 178px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 24px 16px; text-align: center; color: var(--color-muted); }
+.githubEmpty strong { color: var(--color-text-strong); font-size: 20px; }
+.githubEmpty p { margin: 0; line-height: 1.6; word-break: keep-all; }
+.githubEmpty > a { margin-top: 8px; }
+.githubActions { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 16px; }
+.githubActions a, .commitLink { color: var(--color-link); text-decoration: none; }
+.githubActions a:hover, .commitLink:hover { text-decoration: underline; }
+.refreshButton { border: 0; padding: 0; background: none; color: var(--color-muted); font-size: 14px; }
+.refreshButton:disabled { cursor: wait; opacity: .6; }
+.githubNote { color: var(--color-muted); font-size: 13px; line-height: 20px; margin: 16px 0 0; }
