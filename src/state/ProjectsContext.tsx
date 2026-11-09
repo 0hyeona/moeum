@@ -11,6 +11,7 @@ import { useAuth } from './AuthContext';
 import { Navigate } from 'react-router';
 import { ApiError } from '../api/client';
 import { clearAccessToken } from '../api/auth';
+import { useFigmaActivities } from './useFigmaActivities';
 
 export type NewProject = { name: string; description: string; urls: Record<Service, string> };
 
@@ -66,23 +67,21 @@ function useProjectsState() {
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [storyDrafts, setStoryDrafts] = useState<Record<string, Record<string, Partial<StoryFields>>>>({});
   const activeProject = projects.find((project) => project.id === activeProjectId);
-  const [activityAttempt, setActivityAttempt] = useState<Record<Service, number>>({ GitHub: 0, Figma: 0, Notion: 0 });
+  const figma = useFigmaActivities(user.id, activeProject, setProjects);
+  type OtherService = Exclude<Service, 'Figma'>;
+  const [activityAttempt, setActivityAttempt] = useState<Record<OtherService, number>>({ GitHub: 0, Notion: 0 });
   const [activityResults, setActivityResults] = useState<Record<string, ActivityState>>({});
   const activityKey = JSON.stringify([activeProjectId, ...services.map(service => activeProject?.urls?.[service] ?? '')]);
-  const activityStates = Object.fromEntries(services.map(service => [service,
-    !activeProject?.urls?.[service] ? { status: 'disconnected' }
-      : !activityLoaders[service] ? { status: 'pending' }
-        : activityResults[activityKey + service] ?? { status: 'loading' },
-  ])) as Record<Service, ActivityState>;
-  function refreshActivities(service?: Service) {
-    setActivityAttempt(value => ({ ...value, ...Object.fromEntries(
-      (service ? [service] : services).map(item => [item, value[item] + 1]),
-    ) }));
+  const getActivityState = (service: OtherService): ActivityState => !activeProject?.urls?.[service]
+    ? { status: 'disconnected' } : activityResults[activityKey + service] ?? { status: 'loading' };
+  const activityStates = { GitHub: getActivityState('GitHub'), Figma: figma.listState, Notion: getActivityState('Notion') };
+  function refreshActivities(service: OtherService) {
+    setActivityAttempt(value => ({ ...value, [service]: value[service] + 1 }));
   }
   const githubSync = activityStates.GitHub;
   const refreshGithubChanges = () => refreshActivities('GitHub');
 
-  function loadActivity(service: Service) {
+  function loadActivity(service: OtherService) {
     if (!activeProjectId) return;
     const controller = new AbortController();
     const [projectId, ...urls] = JSON.parse(activityKey) as string[];
@@ -105,7 +104,6 @@ function useProjectsState() {
     return () => controller.abort();
   }
   useEffect(() => loadActivity('GitHub'), [activityKey, activityAttempt.GitHub]);
-  useEffect(() => loadActivity('Figma'), [activityKey, activityAttempt.Figma]);
   useEffect(() => loadActivity('Notion'), [activityKey, activityAttempt.Notion]);
 
   // 프로젝트와 출처 조합별로 입력한 필드만 보관해 다른 Story에 섞이지 않게 합니다.
@@ -248,7 +246,7 @@ function useProjectsState() {
     loading, loadError, expired, retry: () => setAttempt(value => value + 1),
     projects,
     activeProject,
-    githubSync, refreshGithubChanges, activityStates, refreshActivities,
+    githubSync, refreshGithubChanges, activityStates, refreshActivities, figma,
     selectProject,
     createProject,
     updateProject,

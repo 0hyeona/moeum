@@ -61,7 +61,7 @@ export function LoginPage() {
           <PendingContent pending={isSubmitting} fields={2} label="로그인 요청을 처리하고 있습니다.">
             <form onSubmit={submit} noValidate className={styles.form}>
               <fieldset className={styles.fieldset} disabled={isSubmitting}>
-                <AuthField ref={emailInput} id="email" label="이메일 (ID)" name="email" type="email" autoComplete="username" autoCapitalize="none" spellCheck={false}
+                <AuthField ref={emailInput} id="email" label="이메일" name="email" type="email" autoComplete="username" autoCapitalize="none" spellCheck={false}
                   placeholder="이메일을 입력해주세요." value={values.email} onChange={event => update('email', event.target.value)} error={errors.email} required />
                 <AuthField ref={passwordInput} id="password" label="비밀번호" name="password" type="password" autoComplete="current-password"
                   placeholder="비밀번호를 입력해주세요." value={values.password} onChange={event => update('password', event.target.value)} error={errors.password} required />

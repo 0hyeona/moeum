@@ -3,9 +3,10 @@
 
 /* 검색, 필터, 피드 */
 .changes { min-width: 0; display: flex; flex-direction: column; }
-.toolbar { display: flex; gap: 16px; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 16px; }
 .search { flex: 1; }
-.filters { display: flex; gap: 8px; }
+.filters { display: flex; flex-wrap: wrap; gap: 8px; }
+.filters > button[data-active='true'] { color: var(--color-text-strong); border-color: var(--color-border); background-color: white; }
 .restore, .textButton { padding: 4px 0; border: 0; background: none; color: var(--color-link); font-size: 16px; line-height: 22px; }
 .restore:hover, .textButton:hover { text-decoration: underline; text-underline-offset: 4px; }
 .restore { align-self: flex-start; margin-top: 16px; }
@@ -34,10 +35,12 @@
 .hide img { display: block; }
 
 /* 선택된 변경사항, 분석 방식 */
-.side { min-width: 0; display: flex; flex-direction: column; gap: 24px; }
+.side { position: sticky; top: 16px; min-width: 0; max-height: calc(100dvh - 32px); display: flex; flex-direction: column; gap: 24px; }
 .panel { min-width: 0; padding: 32px; border: 1px solid var(--color-border); border-radius: var(--radius-control); background: var(--color-surface); }
 .panel h2 { margin: 0; font-size: 25px; line-height: 30px; font-weight: 700; }
-.selectedPanel { min-height: 491px; }
+.selectedPanel { min-height: 0; flex: 0 1 auto; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.side > .panel:not(.selectedPanel), .side > .analyzeButton { flex-shrink: 0; }
+.selectedPanel > .empty { min-height: min(240px, 24dvh); display: grid; place-items: center; }
 .selectedList { margin: 32px 0 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .selectedItem { min-width: 0; display: flex; flex-direction: column; }
 .selectedItem > * { flex: 1; }
@@ -46,6 +49,7 @@
 
 @media (max-width: 1439px) {
   .layout { grid-template-columns: minmax(0, 1fr); gap: 24px; padding: 0 48px; }
+  .side { position: static; height: auto; max-height: none; justify-content: flex-start; }
   .selectedPanel { min-height: 0; }
 }
 @media (max-width: 700px) {
@@ -69,5 +73,15 @@
   .analyzeButton { align-self: stretch; margin-top: 0; }
 }
 
-.serviceNotice { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 16px; padding: 16px; border: 1px solid var(--color-border); border-radius: var(--radius-control); color: var(--color-muted); font-size: 16px; }
-.serviceNotice span { flex: 1; min-width: 180px; overflow-wrap: anywhere; }
+.serviceNotice { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center; gap: 12px; margin-top: 16px; padding: 16px; border: 1px solid var(--color-border); border-radius: 10px; background: var(--color-surface); font-size: 16px; }
+.noticeIcon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 10px; background: var(--color-background); }
+.noticeContent { min-width: 0; }
+.noticeTitle { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.noticeTitle span { font-size: 12px; color: var(--color-muted); }
+.noticeContent p { margin: 8px 0 0; color: var(--color-muted); font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
+.serviceError .noticeTitle span { color: #9b5324; }
+.serviceNotice .textButton { padding: 8px 12px; border: 1px solid var(--color-border-strong); border-radius: 8px; font-size: 14px; white-space: nowrap; text-decoration: none; }
+.serviceNotice .textButton:hover { background: var(--color-selected); }
+.serviceNotice .textButton:disabled { cursor: default; opacity: .6; background: none; }
+.noticeActions { display: flex; flex-wrap: wrap; gap: 8px; }
+@media (max-width: 520px) { .serviceNotice { grid-template-columns: 32px minmax(0, 1fr); gap: 8px; } .noticeIcon { width: 32px; height: 32px; } .serviceNotice > .textButton, .noticeActions { grid-column: 2; justify-self: start; } }

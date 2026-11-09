@@ -1,4 +1,6 @@
+import { useEffect } from 'react';
 import { Link, Navigate } from 'react-router';
+import type { ActivityState } from '../data/activity';
 import { services, type ServiceState } from '../data/projects';
 import { useProjects } from '../state/ProjectsContext';
 import { StoryCard } from '../components/StoryCard';
@@ -7,37 +9,83 @@ import { ServiceIcon, useDocumentTitle } from '../components/ui';
 import ui from '../components/ui.module.css';
 import styles from './DashboardPage.module.css';
 
+const retryTime = new Intl.DateTimeFormat('ko-KR', {
+  month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit',
+});
+
 export function DashboardPage() {
   useDocumentTitle('대시보드');
-  const { activeProject: project, activityStates, refreshActivities } = useProjects();
+  const { activeProject: project, activityStates, refreshActivities, figma } = useProjects();
+  const { reload: reloadFigma } = figma;
+  useEffect(() => reloadFigma(), [reloadFigma]);
   if (!project) return <Navigate to="/projects" replace />;
 
   return (
     <div className={styles.page}>
       <h1 className={ui.visuallyHidden}>{project.name} 대시보드</h1>
       <div className={styles.topRow}>
-        <section className={`${styles.panel} ${styles.pending}`} aria-labelledby="pending-heading">
-          <div className={styles.panelHeader}>
-            <h2 id="pending-heading">미정리 변경사항 조회</h2>
+        <section className={styles.panel} aria-labelledby="pending-heading">
+          <div className={`${styles.panelHeader} ${styles.pendingHeader}`}>
+            <div>
+              <h2 id="pending-heading">미정리 변경사항</h2>
+              <p>Story로 정리할 변경사항을 서비스별로 확인해 보세요.</p>
+            </div>
             <Link to="/changes?period=all">변경사항 전체 보기</Link>
           </div>
           <ul className={styles.stats}>
-            {services.map((service) => (
-              <li key={service} className={styles.stat}>
-                <span className={styles.statService}>
-                  <ServiceIcon service={service} />
-                  {service}
-                </span>
-                <PendingCount sync={activityStates[service].status} state={project.services[service]} count={project.changes.filter((change) => change.service === service).length} />
-                {service !== 'GitHub' && project.urls?.[service] && <button type="button" className={styles.refreshButton}
-                  disabled={activityStates[service].status === 'loading'} onClick={() => refreshActivities(service)}>
-                  {activityStates[service].status === 'loading' ? '수집 중…' : `${service} 새로고침`}
-                </button>}
-              </li>
-            ))}
+            {services.map(service => {
+              const state = activityStates[service];
+              const count = project.changes.filter(change => change.service === service).length;
+              const showFigmaControls = service === 'Figma' && Boolean(project.urls?.Figma);
+              const retryAt = showFigmaControls ? figma.retryAt : undefined;
+              return (
+                <li key={service} className={styles.stat} data-waiting={retryAt !== undefined || undefined}>
+                  <span className={styles.statService}>
+                    <span className={styles.statIcon}><ServiceIcon service={service} size={18} /></span>
+                    {service}
+                  </span>
+                  <PendingCount sync={state.status} state={project.services[service]} count={count} />
+                  <div className={styles.statActions}>
+                    {showFigmaControls && (
+                      <button type="button" className={styles.statButton} disabled={figma.refreshDisabled}
+                        onClick={figma.refresh} aria-label={figma.syncing || retryAt !== undefined ? undefined : 'Figma 새로고침'}>
+                        {figma.syncing ? '수집 중…' : retryAt !== undefined ? '수집 대기 중' : '새로고침'}
+                      </button>
+                    )}
+                    {service === 'Notion' && project.urls?.Notion && (
+                      <button type="button" className={styles.statButton} disabled={state.status === 'loading'}
+                        onClick={() => refreshActivities(service)} aria-label={state.status === 'ready' ? 'Notion 새로고침' : undefined}>
+                        {state.status === 'loading' ? '수집 중…' : state.status === 'error' ? '다시 시도' : '새로고침'}
+                      </button>
+                    )}
+                    {state.status === 'error' && service === 'GitHub' && (
+                      <button type="button" className={styles.statButton} onClick={() => refreshActivities(service)}>다시 시도</button>
+                    )}
+                  </div>
+                  <div className={styles.statNotes}>
+                    {state.status === 'error' && <p className={styles.statError} role="alert">{state.error}</p>}
+                    {state.status === 'error' && service === 'Figma' && (
+                      <button type="button" className={styles.statButton} disabled={figma.syncing} onClick={figma.reload}>목록 다시 조회</button>
+                    )}
+                    {retryAt !== undefined ? (
+                      <p className={styles.retryNote} role="status" title={figma.notice}>
+                        <time dateTime={new Date(retryAt).toISOString()}>{retryTime.format(retryAt)}</time> 이후 다시 시도
+                      </p>
+                    ) : showFigmaControls && figma.notice && (
+                      <p className={figma.error ? styles.statError : undefined} role={figma.error ? 'alert' : 'status'}>{figma.notice}</p>
+                    )}
+                    {showFigmaControls && figma.hasMore && <p>이어 수집할 기록이 있어요.</p>}
+                  </div>
+                </li>
+              );
+            })}
           </ul>
-          {services.map(service => { const state = activityStates[service]; return state.status === 'error' ? <p key={service} className={styles.githubNote} role="alert">{service}: {state.error} <button type="button" className={styles.refreshButton} onClick={() => refreshActivities(service)}>다시 시도</button></p> : null; })}
-          <Link to="/changes?period=all" className={`${ui.primaryButton} ${styles.storyButton}`}>Story 만들기</Link>
+          <div className={styles.pendingFooter}>
+            <Link to="/changes?period=all" className={`${ui.primaryButton} ${styles.storyButton}`}>
+              <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M8 3v10M3 8h10" /></svg>
+              Story 만들기
+            </Link>
+          </div>
         </section>
 
         <section className={styles.panel} aria-labelledby="story-heading">
@@ -63,13 +111,13 @@ export function DashboardPage() {
   );
 }
 
-function PendingCount({ state, count, sync }: { state: ServiceState; count: number; sync?: string }) {
-  if (sync === 'pending') return <span className={styles.muted}>조회 준비 중</span>;
-  if (sync === 'loading') return <span className={styles.muted} role="status">조회 중…</span>;
-  if (sync === 'error') return <span className={styles.alert}>조회 실패</span>;
+function PendingCount({ state, count, sync }: { state: ServiceState; count: number; sync: ActivityState['status'] }) {
+  if (sync === 'pending') return <span className={styles.statStatus}>조회 준비 중</span>;
+  if (sync === 'loading') return <span className={styles.statStatus} role="status">조회 중…</span>;
+  if (sync === 'error') return <span className={`${styles.statStatus} ${styles.statError}`}>조회 실패</span>;
   if (state.status === 'connected') {
     return <span className={styles.count}><strong>{count}</strong>개</span>;
   }
-  if (state.status === 'reconnect') return <span className={styles.alert}>재연결필요</span>;
-  return <span className={styles.muted}>미연결</span>;
+  if (state.status === 'reconnect') return <span className={`${styles.statStatus} ${styles.statError}`}>재연결 필요</span>;
+  return <span className={styles.statStatus}>미연결</span>;
 }

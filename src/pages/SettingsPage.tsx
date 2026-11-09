@@ -5,7 +5,7 @@ import type { Project, Service } from '../data/projects';
 import { githubRepository } from '../data/github';
 import { useProjects } from '../state/ProjectsContext';
 import { ConfirmDialog } from '../components/ConfirmDialog';
-import { PageHeading, ServiceIcon, useDocumentTitle } from '../components/ui';
+import { ServiceIcon, useDocumentTitle } from '../components/ui';
 import form from '../components/form.module.css';
 import ui from '../components/ui.module.css';
 import styles from './SettingsPage.module.css';
@@ -36,21 +36,21 @@ export function SettingsPage() {
 
   return (
     <div className={styles.page}>
-      <PageHeading title="프로젝트 설정" description="프로젝트의 기본 정보와 연동된 도구, AI 설정을 관리할 수 있습니다." />
+      <header className={styles.pageHeader}><h1>프로젝트 설정</h1><p>프로젝트의 기본 정보와 연결된 서비스를 관리해요.</p></header>
       <div className={styles.sections}>
         {/* 헤더에서 프로젝트를 바꾸면 입력 중이던 값을 새 프로젝트 값으로 다시 채웁니다. */}
         <ProjectInfo key={project.id} project={project} />
         <Connections key={`connections-${project.id}`} project={project} />
 
-        <section className={styles.panel} aria-labelledby="danger-heading">
-          <SectionHeader id="danger-heading" title="위험 영역" description="이 작업은 되돌릴 수 없습니다. 신중하게 진행해주세요." />
+        <section className={`${styles.panel} ${styles.dangerPanel}`} aria-labelledby="danger-heading">
+          <SectionHeader id="danger-heading" title="프로젝트 삭제" description="프로젝트를 더 이상 사용하지 않을 때 삭제할 수 있어요." />
           <div className={styles.danger}>
             <div className={styles.alert}>
               <p className={styles.alertTitle}>
                 <img src={errorIcon} alt="" width={24} height={24} />
-                프로젝트 삭제
+                삭제하면 복구할 수 없어요
               </p>
-              <p className={styles.alertText}>이 프로젝트의 모든 데이터가 영구적으로 삭제 됩니다.</p>
+              <p className={styles.alertText}>프로젝트와 모든 Story가 영구적으로 삭제돼요. 필요한 기록을 먼저 확인해주세요.</p>
             </div>
             <button type="button" className={`${ui.dangerButton} ${styles.deleteButton}`} onClick={() => setConfirming(true)}>프로젝트 삭제</button>
           </div>
@@ -149,7 +149,7 @@ function ProjectInfo({ project }: { project: Project }) {
 
   return (
     <section className={styles.panel} aria-labelledby="info-heading">
-      <SectionHeader id="info-heading" title="프로젝트 정보" description="프로젝트의 기본 정보를 수정할 수 있습니다." />
+      <SectionHeader id="info-heading" title="프로젝트 정보" description="수정 후 Enter를 누르거나 입력칸을 벗어나면 자동으로 저장돼요." />
       {saveError && <p className={form.error} role="alert">{saveError}</p>}
       <fieldset className={`${styles.fields} ${styles.fieldset}`} disabled={pending} aria-busy={pending}>
         <div className={form.field}>
@@ -239,14 +239,14 @@ function Connections({ project }: { project: Project }) {
       <ul className={styles.services}>
         {settingServices.map(service => <li key={service} className={styles.service}>
           <div className={styles.serviceInfo}>
-            <label htmlFor={'settings-url-' + service} className={styles.serviceName}><ServiceIcon service={service} />{service}</label>
+            <div className={styles.serviceHeading}><label htmlFor={'settings-url-' + service} className={styles.serviceName}><ServiceIcon service={service} />{service}</label><span className={styles.connectionBadge}>{project.urls?.[service] ? 'URL 저장됨' : '미연결'}</span></div>
             <input id={'settings-url-' + service} type="url" inputMode="url" autoComplete="off" spellCheck={false}
               className={form.input} placeholder={service + ' URL 입력'} value={draft[service]}
               onChange={event => { setDraft(current => ({ ...current, [service]: event.target.value })); setError(''); }} />
           </div>
           <div className={styles.serviceActions}>
-            <button type="button" className={styles.smallButton} onClick={() => void save(service)}>{pending === service ? '저장 중…' : '저장'}</button>
-            {project.urls?.[service] && <button type="button" className={styles.smallButton} onClick={() => void save(service, true)}>연결 해제</button>}
+            <button type="button" className={`${styles.smallButton} ${styles.emphasis}`} onClick={() => void save(service)}>{pending === service ? '저장 중…' : '저장'}</button>
+            {project.urls?.[service] && <button type="button" className={`${styles.smallButton} ${styles.disconnect}`} onClick={() => void save(service, true)}>연결 해제</button>}
           </div>
         </li>)}
       </ul>

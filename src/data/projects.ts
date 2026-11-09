@@ -26,7 +26,7 @@ export type Change = {
   after: string;
 };
 
-export type StoryStatus = '초안' | '완료';
+export type StoryStatus = '초안' | '완료' | '진행중';
 
 export type StoryFields = {
   title: string;

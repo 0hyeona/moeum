@@ -3,7 +3,9 @@ import { Link, Navigate, useNavigate, useSearchParams } from 'react-router';
 import closeIcon from '../../assets/icons/close.svg';
 import { services, type Change, type Service } from '../data/projects';
 import { useProjects } from '../state/ProjectsContext';
-import { FilterSelect, type FilterOption } from '../components/FilterSelect';
+import type { FilterOption } from '../components/FilterSelect';
+import { MoodFilter } from '../components/MoodFilter';
+import { DateRangeFilter, type DateRange } from '../components/DateRangeFilter';
 import { ModeOptions } from '../components/ModeOptions';
 import { SearchField } from '../components/SearchField';
 import { SelectedChangeCard } from '../components/SelectedChangeCard';
@@ -11,14 +13,6 @@ import { Badge, PageHeading, ServiceIcon, useDocumentTitle } from '../components
 import form from '../components/form.module.css';
 import ui from '../components/ui.module.css';
 import styles from './ChangesPage.module.css';
-
-type Period = 'today' | 'week' | 'all';
-const periodOptions: readonly FilterOption<Period>[] = [
-  { value: 'today', label: '오늘' },
-  { value: 'week', label: '최근 7일' },
-  { value: 'all', label: '전체 기간' },
-];
-const periodDays: Record<Period, number> = { today: 0, week: 6, all: Infinity };
 
 const serviceOptions: readonly FilterOption<Service | 'all'>[] = [
   { value: 'all', label: '서비스 전체' },
@@ -29,15 +23,20 @@ function isService(value: string | null): value is Service {
   return services.some((service) => service === value);
 }
 
-function isPeriod(value: string | null): value is Period {
-  return periodOptions.some((option) => option.value === value);
+function dateKey(date: Date) {
+  return [date.getFullYear(), String(date.getMonth()+1).padStart(2,'0'), String(date.getDate()).padStart(2,'0')].join('.');
 }
-
-// 대시보드의 '전체 보기' 링크(?service=, ?period=all)로 들어오면 오늘 것만 보여주지 않습니다.
-function initialPeriod(searchParams: URLSearchParams): Period {
-  const period = searchParams.get('period');
-  if (isPeriod(period)) return period;
-  return searchParams.has('service') ? 'all' : 'today';
+function initialPeriod(params: URLSearchParams): DateRange | null {
+  if (!['today', 'week'].includes(params.get('period') ?? '')) return null;
+  const end = new Date(); const start = new Date();
+  if (params.get('period') === 'week') start.setDate(start.getDate()-6);
+  return { start: dateKey(start), end: dateKey(end) };
+}
+function inPeriod(change: Change, period: DateRange | null) {
+  if (!period) return true;
+  if (!Number.isFinite(change.daysAgo)) return false;
+  const date = new Date(); date.setDate(date.getDate()-change.daysAgo);
+  const key = dateKey(date); return key >= period.start && key <= period.end;
 }
 
 function checkboxId(change: Change) {
@@ -52,11 +51,17 @@ function matchesQuery(change: Change, query: string) {
 
 export function ChangesPage() {
   useDocumentTitle('변경사항 선택');
-  const { activeProject: project, selectedChangeIds, toggleChange, mode, setMode, analyze, activityStates, refreshActivities } = useProjects();
+  const { activeProject: project, selectedChangeIds, toggleChange, mode, setMode, analyze, activityStates, refreshActivities, figma } = useProjects();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const serviceParam = searchParams.get('service');
+  const service = isService(serviceParam) ? serviceParam : 'all';
+  const { reload: reloadFigma } = figma;
+  useEffect(() => {
+    if (service === 'all' || service === 'Figma') return reloadFigma();
+  }, [reloadFigma, service]);
   const [query, setQuery] = useState('');
-  const [period, setPeriod] = useState<Period>(() => initialPeriod(searchParams));
+  const [period, setPeriod] = useState<DateRange | null>(() => initialPeriod(searchParams));
   const [status, setStatus] = useState('all');
   const [hiddenIds, setHiddenIds] = useState<string[]>([]);
   const restoreButton = useRef<HTMLButtonElement>(null);
@@ -73,25 +78,24 @@ export function ChangesPage() {
   });
   if (!project) return <Navigate to="/projects" replace />;
 
-  const serviceParam = searchParams.get('service');
-  const service = isService(serviceParam) ? serviceParam : 'all';
   const visibleServices = services.filter(item => service === 'all' || item === service);
   const waiting = visibleServices.some(item => ['pending', 'loading', 'error', 'disconnected'].includes(activityStates[item].status));
   const statusOptions: FilterOption<string>[] = [
     { value: 'all', label: '상태 전체' },
-    ...[...new Set(project.changes.map((change) => change.status))].map((value) => ({ value, label: value })),
+    { value: '초안', label: '초안' }, { value: '진행중', label: '진행 중' }, { value: '완료', label: '완료' },
   ];
 
   const normalizedQuery = query.trim().toLowerCase();
   const hiddenChanges = project.changes.filter((change) => hiddenIds.includes(change.id));
   const matchesFilters = (change: Change) => (
-    change.daysAgo <= periodDays[period]
+    inPeriod(change, period)
     && (service === 'all' || change.service === service)
-    && (status === 'all' || change.status === status)
+    && (status === 'all' || change.status.replace(/\s/g, '') === status)
     && matchesQuery(change, normalizedQuery)
   );
   const shownChanges = project.changes.filter((change) => !hiddenIds.includes(change.id));
   const visibleChanges = shownChanges.filter(matchesFilters);
+  const hasServiceChanges = project.changes.some(change => service === 'all' || change.service === service);
   const filteredOutCount = shownChanges.length - visibleChanges.length;
   // 오른쪽 패널은 고른 순서대로 보여줍니다.
   const selectedChanges = selectedChangeIds
@@ -122,7 +126,7 @@ export function ChangesPage() {
 
   function resetFilters() {
     setQuery('');
-    setPeriod('all');
+    setPeriod(null);
     setStatus('all');
     changeService('all');
     pendingFocus.current = () => focusCheckbox(shownChanges[0]);
@@ -150,9 +154,9 @@ export function ChangesPage() {
           <div className={styles.toolbar}>
             <SearchField className={styles.search} label="변경사항 검색" placeholder="변경 메시지, 서비스, 상태 검색" value={query} onChange={setQuery} />
             <div className={styles.filters}>
-              <FilterSelect label="기간" value={period} options={periodOptions} onChange={setPeriod} />
-              <FilterSelect label="서비스" value={service} options={serviceOptions} onChange={changeService} />
-              <FilterSelect label="상태" value={status} options={statusOptions} onChange={setStatus} />
+              <DateRangeFilter value={period} onChange={setPeriod} />
+              <MoodFilter label="서비스" value={service} options={serviceOptions} onChange={changeService} />
+              <MoodFilter label="상태" value={status} options={statusOptions} onChange={setStatus} />
             </div>
           </div>
 
@@ -165,15 +169,35 @@ export function ChangesPage() {
           {visibleServices.map(item => {
             const state = activityStates[item];
             if (state.status === 'ready' && item === 'GitHub') return null;
-            return <div key={item} className={styles.serviceNotice} role={state.status === 'error' ? 'alert' : 'status'}>
-              <ServiceIcon service={item} />
-              <span>{item}: {state.status === 'loading' ? '변경사항을 수집·조회하고 있어요…' : state.status === 'pending' ? '변경사항 조회를 준비하고 있어요.' : state.status === 'disconnected' ? '연결된 주소가 없어요.' : state.status === 'ready' ? `수집 완료 · 미정리 변경사항 ${project.changes.filter(change => change.service === item).length}개` : state.error}</span>
-              {state.status === 'error' && <button type="button" className={styles.textButton} onClick={() => refreshActivities(item)}>다시 시도</button>}
-              {item !== 'GitHub' && (state.status === 'ready' || state.status === 'loading') && <button type="button" className={styles.textButton} disabled={state.status === 'loading'} onClick={() => refreshActivities(item)}>새로고침</button>}
+            if (item === 'Figma' && state.status !== 'disconnected') {
+              const count = project.changes.filter(change => change.service === 'Figma').length;
+              return <div key={item} className={`${styles.serviceNotice} ${state.status === 'error' || figma.error ? styles.serviceError : ''}`}>
+                <div className={styles.noticeIcon}><ServiceIcon service={item} /></div>
+                <div className={styles.noticeContent}>
+                  <div className={styles.noticeTitle}><strong>Figma</strong><span role="status">
+                    {figma.syncing ? '수집 중…' : state.status === 'loading' ? '저장된 변경사항 조회 중…' : state.status === 'error' ? '조회 실패' : '저장된 변경사항'}
+                  </span></div>
+                  {(state.status === 'ready' || count > 0) && <p>미정리 변경사항 {count}개</p>}
+                  {state.status === 'error' && <p role="alert">{state.error}</p>}
+                  {figma.notice && <p role={figma.error ? 'alert' : 'status'}>{figma.notice}</p>}
+                  {figma.hasMore && <p>새로고침하면 다음 페이지의 기록을 수집해요.</p>}
+                </div>
+                <div className={styles.noticeActions}>
+                  <button type="button" className={styles.textButton} disabled={figma.refreshDisabled} onClick={figma.refresh}>새로고침</button>
+                  {state.status === 'error' && <button type="button" className={styles.textButton} disabled={figma.syncing} onClick={figma.reload}>목록 다시 조회</button>}
+                </div>
+              </div>;
+            }
+            return <div key={item} className={`${styles.serviceNotice} ${state.status === 'error' ? styles.serviceError : ''}`} role={state.status === 'error' ? 'alert' : 'status'}>
+              <div className={styles.noticeIcon}><ServiceIcon service={item} /></div>
+              <div className={styles.noticeContent}><div className={styles.noticeTitle}><strong>{item}</strong><span>{state.status === 'error' ? '불러오기 실패' : state.status === 'disconnected' ? '연결 필요' : state.status === 'ready' ? '수집 완료' : '불러오는 중'}</span></div>
+              <p>{state.status === 'loading' ? '변경사항을 수집·조회하고 있어요…' : state.status === 'pending' ? '변경사항 조회를 준비하고 있어요.' : state.status === 'disconnected' ? '서비스를 연결하면 변경사항을 모아볼 수 있어요.' : state.status === 'ready' ? `미정리 변경사항 ${project.changes.filter(change => change.service === item).length}개` : state.error}</p></div>
+              {item !== 'Figma' && state.status === 'error' && <button type="button" className={styles.textButton} onClick={() => refreshActivities(item)}>다시 시도</button>}
+              {item === 'Notion' && (state.status === 'ready' || state.status === 'loading') && <button type="button" className={styles.textButton} disabled={state.status === 'loading'} onClick={() => refreshActivities(item)}>새로고침</button>}
               {state.status === 'disconnected' && <Link className={styles.textButton} to={'/settings#settings-url-' + item}>연결하기</Link>}
             </div>;
           })}
-          {visibleChanges.length === 0 && waiting && !shownChanges.some(change => service === 'all' || change.service === service) ? null : project.changes.length === 0 ? (
+          {visibleChanges.length === 0 && waiting && !hasServiceChanges ? null : !hasServiceChanges ? (
             <div className={styles.empty}>
               <p>아직 수집된 변경사항이 없어요.</p>
               <Link to="/stories/new" className={styles.textButton}>Story 직접 작성하기</Link>

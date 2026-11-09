@@ -1,8 +1,7 @@
-import { useId, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type Ref } from 'react';
+import { useId, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type Ref } from 'react';
 import { Link } from 'react-router';
 import logo from '../../assets/moeum-logo.svg';
 import styles from '../pages/LoginPage.module.css';
-import { FormSkeleton } from './Skeleton';
 
 export function AuthShell({ children }: { children: ReactNode }) {
   return <main className={styles.page}><div className={styles.content}>
@@ -11,7 +10,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
     </Link>
     <div className={styles.loginArea}>
       {children}
-      <p className={styles.terms}>로그인 시 서비스 이용약관 및 개인정보 처리방침에 동의합니다.</p>
+      <p className={styles.terms}>흩어진 기록이 하나의 경험이 되는 곳, 모음</p>
     </div>
   </div></main>;
 }
@@ -22,12 +21,26 @@ type AuthFieldProps = InputHTMLAttributes<HTMLInputElement> & {
 
 export function AuthField({ label, hint, error, success, id, ref, ...input }: AuthFieldProps) {
   const generated = useId();
+  const [visible, setVisible] = useState(false);
+  const isPassword = input.type === 'password';
   const inputId = id ?? generated;
   const description = error || success || hint;
   return <div className={styles.field}>
     <label htmlFor={inputId}>{label}</label>
-    <input {...input} id={inputId} ref={ref} aria-invalid={!!error}
+    <div className={styles.inputWrap}>
+    <input {...input} type={isPassword && visible ? 'text' : input.type} id={inputId} ref={ref} aria-invalid={!!error}
+      className={isPassword ? styles.passwordInput : undefined}
       aria-describedby={description ? `${inputId}-description` : undefined} />
+    {isPassword && <button type="button" className={styles.passwordToggle}
+      aria-label={`${label} ${visible ? '숨기기' : '보기'}`} aria-pressed={visible}
+      aria-controls={inputId} disabled={input.disabled}
+      onClick={() => setVisible(current => !current)}>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" /><circle cx="12" cy="12" r="3" />
+        {visible && <path d="m3 3 18 18" />}
+      </svg>
+    </button>}
+    </div>
     {description && <p id={`${inputId}-description`}
       className={error ? styles.fieldError : success ? styles.success : styles.hint}
       role={error ? 'alert' : undefined}>{description}</p>}
@@ -39,11 +52,10 @@ export function AuthButton({ children, outlined = false, className = '', ...prop
   return <button {...props} className={`${styles.primaryButton} ${outlined ? styles.outlined : ''} ${className}`}>{children}</button>;
 }
 
-export function PendingContent({ pending, fields, label, children }:
+export function PendingContent({ pending, label, children }:
   { pending: boolean; fields: number; label: string; children: ReactNode }) {
-  return <div className={styles.pendingContent}>
-    <div className={pending ? styles.concealed : undefined} inert={pending} aria-hidden={pending || undefined} aria-busy={pending}>{children}</div>
-    {pending && <div className={styles.pendingOverlay}><FormSkeleton fields={fields} /></div>}
-    <span className={styles.srOnly} role="status">{pending ? label : ''}</span>
+  return <div className={styles.pendingContent} aria-busy={pending}>
+    {children}
+    <div role="status">{pending && <p className={styles.pendingNotice}><span className={styles.spinner} aria-hidden="true" />{label}</p>}</div>
   </div>;
 }

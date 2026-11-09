@@ -9,6 +9,7 @@ export class ApiError extends Error {
   constructor(
     public readonly status: number,
     public readonly data: unknown,
+    public readonly headers = new Headers(),
   ) {
     super(getErrorMessage(data, status));
     this.name = 'ApiError';
@@ -64,11 +65,11 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}): Pr
     try {
       data = JSON.parse(text);
     } catch {
-      if (!response.ok) throw new ApiError(response.status, undefined);
+      if (!response.ok) throw new ApiError(response.status, undefined, response.headers);
       throw new Error('서버가 JSON 형식이 아닌 응답을 반환했습니다. API 경로를 확인해주세요.');
     }
   }
-  if (!response.ok) throw new ApiError(response.status, data);
+  if (!response.ok) throw new ApiError(response.status, data, response.headers);
   // T는 호출하는 쪽의 TypeScript 타입입니다. 실제 응답 검증을 대신하지 않습니다.
   return data as T;
 }
