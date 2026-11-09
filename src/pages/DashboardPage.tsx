@@ -1,64 +1,93 @@
-import { useState } from 'react';
+import { useEffect } from 'react';
 import { Link, Navigate } from 'react-router';
+import type { ActivityState } from '../data/activity';
 import { services, type ServiceState } from '../data/projects';
 import { useProjects } from '../state/ProjectsContext';
 import { StoryCard } from '../components/StoryCard';
-import { ConfirmDialog } from '../components/ConfirmDialog';
-import { Badge, ServiceIcon, useDocumentTitle } from '../components/ui';
-import form from '../components/form.module.css';
+import { GitHubActivity } from '../components/GitHubActivity';
+import { ServiceIcon, useDocumentTitle } from '../components/ui';
 import ui from '../components/ui.module.css';
 import styles from './DashboardPage.module.css';
 
+const retryTime = new Intl.DateTimeFormat('ko-KR', {
+  month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit',
+});
+
 export function DashboardPage() {
   useDocumentTitle('대시보드');
-  const { activeProject: project, selectRepository } = useProjects();
-  const [pendingRepository, setPendingRepository] = useState<{ projectId: string; name: string } | null>(null);
+  const { activeProject: project, activityStates, refreshActivities, figma } = useProjects();
+  const { reload: reloadFigma } = figma;
+  useEffect(() => reloadFigma(), [reloadFigma]);
   if (!project) return <Navigate to="/projects" replace />;
-  const repositoryLocked = project.selectedRepository !== null;
 
   return (
     <div className={styles.page}>
       <h1 className={ui.visuallyHidden}>{project.name} 대시보드</h1>
       <div className={styles.topRow}>
-        <section className={`${styles.panel} ${styles.pending}`} aria-labelledby="pending-heading">
-          <div className={styles.panelHeader}>
-            <h2 id="pending-heading">미정리 변경사항 조회</h2>
+        <section className={styles.panel} aria-labelledby="pending-heading">
+          <div className={`${styles.panelHeader} ${styles.pendingHeader}`}>
+            <div>
+              <h2 id="pending-heading">미정리 변경사항</h2>
+              <p>Story로 정리할 변경사항을 서비스별로 확인해 보세요.</p>
+            </div>
             <Link to="/changes?period=all">변경사항 전체 보기</Link>
           </div>
           <ul className={styles.stats}>
-            {services.map((service) => (
-              <li key={service} className={styles.stat}>
-                <span className={styles.statService}>
-                  <ServiceIcon service={service} />
-                  {service}
-                </span>
-                <PendingCount state={project.services[service]} count={project.changes.filter((change) => change.service === service).length} />
-              </li>
-            ))}
+            {services.map(service => {
+              const state = activityStates[service];
+              const count = project.changes.filter(change => change.service === service).length;
+              const showFigmaControls = service === 'Figma' && Boolean(project.urls?.Figma);
+              const retryAt = showFigmaControls ? figma.retryAt : undefined;
+              return (
+                <li key={service} className={styles.stat} data-waiting={retryAt !== undefined || undefined}>
+                  <span className={styles.statService}>
+                    <span className={styles.statIcon}><ServiceIcon service={service} size={18} /></span>
+                    {service}
+                  </span>
+                  <PendingCount sync={state.status} state={project.services[service]} count={count} />
+                  <div className={styles.statActions}>
+                    {showFigmaControls && (
+                      <button type="button" className={styles.statButton} disabled={figma.refreshDisabled}
+                        onClick={figma.refresh} aria-label={figma.syncing || retryAt !== undefined ? undefined : 'Figma 새로고침'}>
+                        {figma.syncing ? '수집 중…' : retryAt !== undefined ? '수집 대기 중' : '새로고침'}
+                      </button>
+                    )}
+                    {service === 'Notion' && project.urls?.Notion && (
+                      <button type="button" className={styles.statButton} disabled={state.status === 'loading'}
+                        onClick={() => refreshActivities(service)} aria-label={state.status === 'ready' ? 'Notion 새로고침' : undefined}>
+                        {state.status === 'loading' ? '수집 중…' : state.status === 'error' ? '다시 시도' : '새로고침'}
+                      </button>
+                    )}
+                    {state.status === 'error' && service === 'GitHub' && (
+                      <button type="button" className={styles.statButton} onClick={() => refreshActivities(service)}>다시 시도</button>
+                    )}
+                  </div>
+                  <div className={styles.statNotes}>
+                    {state.status === 'error' && <p className={styles.statError} role="alert">{state.error}</p>}
+                    {state.status === 'error' && service === 'Figma' && (
+                      <button type="button" className={styles.statButton} disabled={figma.syncing} onClick={figma.reload}>목록 다시 조회</button>
+                    )}
+                    {retryAt !== undefined ? (
+                      <p className={styles.retryNote} role="status" title={figma.notice}>
+                        <time dateTime={new Date(retryAt).toISOString()}>{retryTime.format(retryAt)}</time> 이후 다시 시도
+                      </p>
+                    ) : showFigmaControls && figma.notice && (
+                      <p className={figma.error ? styles.statError : undefined} role={figma.error ? 'alert' : 'status'}>{figma.notice}</p>
+                    )}
+                    {showFigmaControls && figma.hasMore && <p>이어 수집할 기록이 있어요.</p>}
+                  </div>
+                </li>
+              );
+            })}
           </ul>
-          <Link to="/changes" className={`${ui.primaryButton} ${styles.storyButton}`}>Story 만들기</Link>
+          <div className={styles.pendingFooter}>
+            <Link to="/changes?period=all" className={`${ui.primaryButton} ${styles.storyButton}`}>
+              <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M8 3v10M3 8h10" /></svg>
+              Story 만들기
+            </Link>
+          </div>
         </section>
 
-        <section className={`${styles.panel} ${styles.repositories}`} aria-labelledby="repository-heading">
-          <h2 id="repository-heading">Repository 선택</h2>
-          {project.repositories.length > 0 ? (
-            <fieldset className={styles.repositoryList} disabled={repositoryLocked} aria-labelledby="repository-heading" aria-describedby={repositoryLocked ? 'repository-status' : undefined}>
-              <legend className={ui.visuallyHidden}>레퍼지토리 선택</legend>
-              {project.repositories.map((repository) => (
-                <label key={repository} className={`${styles.repository} ${repositoryLocked ? styles.repositoryDisabled : ''}`}>
-                  <input type="radio" name="repository" className={form.radio} value={repository} checked={project.selectedRepository === repository} onChange={() => setPendingRepository({ projectId: project.id, name: repository })} />
-                  <span>{repository}</span>
-                </label>
-              ))}
-            </fieldset>
-          ) : (
-            <p className={styles.empty}>연결된 Repository가 없어요.</p>
-          )}
-          {repositoryLocked && <p id="repository-status" className={styles.repositoryStatus} role="status">선택 완료 · 레퍼지토리는 변경할 수 없어요.</p>}
-        </section>
-      </div>
-
-      <div className={styles.bottomRow}>
         <section className={styles.panel} aria-labelledby="story-heading">
           <div className={styles.panelHeader}>
             <h2 id="story-heading">최근 Story</h2>
@@ -66,74 +95,29 @@ export function DashboardPage() {
           </div>
           {project.stories.length > 0 ? (
             <ul className={styles.stories}>
-              {project.stories.slice(0, 3).map((story) => <li key={story.id}><StoryCard story={story} /></li>)}
+              {project.stories.slice(0, 3).map((story) => <li key={story.id}><StoryCard story={story} className={styles.storyCard} /></li>)}
             </ul>
           ) : (
             <p className={styles.empty}>아직 작성된 Story가 없어요.</p>
           )}
         </section>
 
-        <section className={`${styles.panel} ${styles.commits}`} aria-labelledby="commit-heading">
-          <div className={styles.panelHeader}>
-            <h2 id="commit-heading">최근 GitHub 변경사항</h2>
-            <Link to="/changes?service=GitHub">변경사항 전체 보기</Link>
-          </div>
-          {project.commits.length > 0 ? (
-            <div className={styles.tableScroll}>
-              <table className={styles.table}>
-                <colgroup>
-                  <col className={styles.narrowColumn} />
-                  <col className={styles.messageColumn} />
-                  <col className={styles.narrowColumn} />
-                  <col className={styles.narrowColumn} />
-                  <col />
-                </colgroup>
-                <thead>
-                  <tr>
-                    <th scope="col">커밋 기록</th>
-                    <th scope="col">커밋 메시지</th>
-                    <th scope="col">날짜</th>
-                    <th scope="col">변경사항</th>
-                    <th scope="col">푸시/머지 상태</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {project.commits.map((commit) => (
-                    <tr key={commit.sha}>
-                      <td>{commit.sha}</td>
-                      <td title={commit.message}>{commit.message}</td>
-                      <td>{commit.date}</td>
-                      <td>
-                        <span className={styles.additions}>+{commit.additions}</span>{' '}
-                        <span className={styles.deletions}>-{commit.deletions}</span>
-                      </td>
-                      <td><Badge>{commit.state}</Badge></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <p className={styles.empty}>아직 수집된 GitHub 변경사항이 없어요.</p>
-          )}
-        </section>
       </div>
-      {pendingRepository?.projectId === project.id && !repositoryLocked && <ConfirmDialog
-        title="이 레퍼지토리를 선택할까요?"
-        description="선택한 레퍼지토리는 이후 변경할 수 없어요. 프로젝트에 사용할 항목이 맞는지 확인해주세요."
-        confirmLabel="선택 확정"
-        tone="primary"
-        onConfirm={() => { selectRepository(pendingRepository.name); setPendingRepository(null); }}
-        onCancel={() => setPendingRepository(null)}
-      >{pendingRepository.name}</ConfirmDialog>}
+
+      <div className={styles.bottomRow}>
+        <GitHubActivity onRefresh={() => refreshActivities('GitHub')} key={project.id} url={project.urls?.GitHub ?? ''} />
+      </div>
     </div>
   );
 }
 
-function PendingCount({ state, count }: { state: ServiceState; count: number }) {
+function PendingCount({ state, count, sync }: { state: ServiceState; count: number; sync: ActivityState['status'] }) {
+  if (sync === 'pending') return <span className={styles.statStatus}>조회 준비 중</span>;
+  if (sync === 'loading') return <span className={styles.statStatus} role="status">조회 중…</span>;
+  if (sync === 'error') return <span className={`${styles.statStatus} ${styles.statError}`}>조회 실패</span>;
   if (state.status === 'connected') {
     return <span className={styles.count}><strong>{count}</strong>개</span>;
   }
-  if (state.status === 'reconnect') return <span className={styles.alert}>재연결필요</span>;
-  return <span className={styles.muted}>미연결</span>;
+  if (state.status === 'reconnect') return <span className={`${styles.statStatus} ${styles.statError}`}>재연결 필요</span>;
+  return <span className={styles.statStatus}>미연결</span>;
 }

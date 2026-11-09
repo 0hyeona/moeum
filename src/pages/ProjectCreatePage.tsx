@@ -1,6 +1,7 @@
 import { useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
 import type { Service } from '../data/projects';
+import { githubRepository } from '../data/github';
 import { useProjects } from '../state/ProjectsContext';
 import { PageHeading, ServiceIcon, useDocumentTitle } from '../components/ui';
 import ui from '../components/ui.module.css';
@@ -24,6 +25,8 @@ export function ProjectCreatePage() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [nameError, setNameError] = useState('');
+  const [githubUrl, setGithubUrl] = useState('');
+  const [githubError, setGithubError] = useState('');
   const [figmaUrl, setFigmaUrl] = useState('');
   const [figmaError, setFigmaError] = useState('');
   const [notionPage, setNotionPage] = useState('');
@@ -34,6 +37,12 @@ export function ProjectCreatePage() {
 
   function setConnection(service: Service, on: boolean) {
     setConnected((current) => on ? [...current.filter((item) => item !== service), service] : current.filter((item) => item !== service));
+  }
+
+  function connectGithub() {
+    const valid = githubRepository(githubUrl) !== null;
+    setGithubError(valid ? '' : 'https://github.com/소유자/저장소 형식의 URL을 입력해주세요.');
+    setConnection('GitHub', valid);
   }
 
   function connectFigma() {
@@ -57,14 +66,14 @@ export function ProjectCreatePage() {
       nameInput.current?.focus();
       return;
     }
-    if ((figmaUrl.trim() && !connected.includes('Figma')) || (notionPage.trim() && !connected.includes('Notion'))) {
+    if ((githubUrl.trim() && !connected.includes('GitHub')) || (figmaUrl.trim() && !connected.includes('Figma')) || (notionPage.trim() && !connected.includes('Notion'))) {
       setSubmitError('입력한 URL의 연결 버튼을 눌러 확인해주세요.');
       return;
     }
     setPending(true);
     setSubmitError('');
     try {
-      await createProject({ name: name.trim(), description: description.trim(), urls: { GitHub: '', Figma: figmaUrl.trim(), Notion: notionPage.trim() } });
+      await createProject({ name: name.trim(), description: description.trim(), urls: { GitHub: githubUrl.trim(), Figma: figmaUrl.trim(), Notion: notionPage.trim() } });
       navigate('/dashboard');
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : '프로젝트를 생성하지 못했습니다.');
@@ -86,6 +95,9 @@ export function ProjectCreatePage() {
             <input id="project-description" className={styles.input} placeholder="AI Project Journal" maxLength={120} autoComplete="off" value={description} onChange={(event) => setDescription(event.target.value)} />
           </div>
           <div className={styles.connections}>
+            <Connection service="GitHub" controlId="github-url" connected={connected.includes('GitHub')} error={githubError} onConnect={connectGithub}>
+              <input id="github-url" className={styles.input} type="url" inputMode="url" placeholder="https://github.com/owner/repository" autoComplete="off" spellCheck={false} value={githubUrl} onChange={(event) => { setGithubUrl(event.target.value); setGithubError(''); setConnection('GitHub', false); }} aria-invalid={!!githubError} aria-describedby={githubError ? 'github-url-error' : undefined} />
+            </Connection>
             <Connection service="Figma" controlId="figma-url" connected={connected.includes('Figma')} error={figmaError} onConnect={connectFigma}>
               <input id="figma-url" className={styles.input} type="url" inputMode="url" placeholder="URL 입력" autoComplete="off" spellCheck={false} value={figmaUrl} onChange={(event) => { setFigmaUrl(event.target.value); setFigmaError(''); setConnection('Figma', false); }} aria-invalid={!!figmaError} aria-describedby={figmaError ? 'figma-url-error' : undefined} />
             </Connection>

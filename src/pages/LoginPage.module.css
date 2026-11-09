@@ -69,6 +69,38 @@
 .field input::placeholder { color: var(--color-muted); opacity: 1; }
 .field input:hover { border-color: #b4b5ba; }
 .field input:focus { border-color: var(--color-primary); }
+.inputWrap { position: relative; }
+.field .passwordInput { padding-right: 56px; }
+.passwordToggle { position: absolute; top: 6px; right: 6px; width: 44px; height: 44px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 6px; color: var(--color-muted); background: transparent; }
+.passwordToggle:hover:enabled { background: var(--color-selected); color: var(--color-link); }
+.passwordToggle:focus-visible { outline-offset: -3px; }
+.passwordToggle:disabled { cursor: wait; }
+.signupCard { gap: 24px; }
+.signupHeader { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.signupHeader h1 { margin: 0; font-size: 20px; line-height: 1.4; }
+.signupHeader h1:focus { outline: none; }
+.stepCount { font-size: 14px; font-weight: 600; color: var(--color-link); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.stepCount span { color: var(--color-muted); font-weight: 400; }
+.stepTrack { display: flex; gap: 8px; margin: -8px 0 0; padding: 0; list-style: none; }
+.stepTrack li { flex: 1; height: 4px; border-radius: 4px; background: var(--color-border); transition: background-color 220ms ease; }
+.stepTrack .stepActive { background: var(--color-primary); }
+.stepPanel { min-height: 192px; display: flex; flex-direction: column; gap: 24px; animation: stepIn 260ms ease-out both; }
+.stepBackward { animation-name: stepBack; }
+.stepIntro { display: flex; flex-direction: column; gap: 8px; }
+.stepIntro h2 { margin: 0; font-size: 20px; line-height: 1.5; letter-spacing: -.4px; word-break: keep-all; }
+.stepIntro p { margin: 0; color: var(--color-muted); font-size: 16px; line-height: 1.5; word-break: keep-all; }
+.buttonArrow { margin-left: 12px; }
+.enterHint { margin: -4px 0 0; text-align: center; font-size: 13px; line-height: 20px; color: var(--color-muted); }
+.signupCard .accountFooter a, .signupCard .accountFooter button { min-height: 40px; display: inline-flex; align-items: center; }
+.signupError { padding: 12px; border-radius: 8px; background: #fff4f4; color: var(--color-error); font-size: 14px; line-height: 1.5; }
+.signupError p { margin: 0 0 8px; }
+.signupError button { border: 0; background: none; color: inherit; padding: 4px 0; text-decoration: underline; text-underline-offset: 3px; }
+.pendingNotice { display: flex; align-items: center; gap: 8px; margin: 16px 0 0; color: var(--color-muted); font-size: 14px; line-height: 1.5; }
+.spinner { flex-shrink: 0; width: 16px; height: 16px; border: 2px solid var(--color-border-strong); border-top-color: var(--color-primary); border-radius: 50%; animation: spin 800ms linear infinite; }
+@keyframes stepIn { from { opacity: 0; transform: translateX(12px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes stepBack { from { opacity: 0; transform: translateX(-12px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .stepPanel, .spinner { animation: none; } }
 .field input[aria-invalid='true'] { border-color: var(--color-error); }
 .error { margin: 0; font-size: 13px; line-height: 20px; color: var(--color-error); }
 .primaryButton, .githubButton, .primaryLink {

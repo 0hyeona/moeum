@@ -6,7 +6,8 @@ import { AuthBoundary } from './components/AuthBoundary';
 import { ChangesPage } from './pages/ChangesPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { LoginPage } from './pages/LoginPage';
-import { AccountPage } from './pages/AccountPage';
+import { PasswordResetPage } from './pages/PasswordResetPage';
+import { SignupPage } from './pages/SignupPage';
 import { GithubCallbackPage } from './pages/GithubCallbackPage';
 import { ProjectCreatePage } from './pages/ProjectCreatePage';
 import { ProjectListPage } from './pages/ProjectListPage';
@@ -23,9 +24,9 @@ createRoot(document.getElementById('root')!).render(
         <Routes>
           <Route path="/" element={<LoginPage />} />
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/signup" element={<AccountPage key="signup" mode="signup" />} />
+          <Route path="/signup" element={<SignupPage />} />
           <Route path="/auth/github/callback" element={<GithubCallbackPage />} />
-          <Route path="/password-reset" element={<AccountPage key="password" mode="password" />} />
+          <Route path="/password-reset" element={<PasswordResetPage />} />
           <Route element={<AuthBoundary><Outlet /></AuthBoundary>}>
           <Route element={<AppLayout header="centered" />}>
             <Route path="/projects" element={<ProjectListPage />} />

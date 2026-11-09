@@ -1,5 +1,6 @@
 import { apiRequest } from './client';
 import { getAccessToken } from './auth';
+import { githubRepository } from '../data/github';
 import type { Project, Service, ServiceState } from '../data/projects';
 
 export type ProjectResponse = {
@@ -33,13 +34,17 @@ export const deleteProject = (id: string) => request<void>(`/projects/${encodeUR
 
 export function toProject(data: ProjectResponse, previous?: Project): Project {
   const urls = { GitHub: data.github_url ?? '', Figma: data.figma_url ?? '', Notion: data.notion_url ?? '' };
+  const repository = githubRepository(urls.GitHub);
+  const sameSource = (service: Service) => service === 'GitHub'
+    ? githubRepository(previous?.urls?.GitHub ?? '') === repository
+    : (previous?.urls?.[service] ?? '') === urls[service];
   const state = (service: Service): ServiceState => ({ status: urls[service] ? 'connected' : 'disconnected' });
   return {
     id: String(data.id), name: data.project_name, description: data.description ?? '',
     status: data.project_status === 'archived' ? '보관됨' : '진행 중',
     updatedAt: data.updated_at.slice(0, 10).replaceAll('-', '.'), urls,
     services: { GitHub: state('GitHub'), Figma: state('Figma'), Notion: state('Notion') },
-    repositories: previous?.repositories ?? [], selectedRepository: previous?.selectedRepository ?? null,
-    changes: previous?.changes ?? [], stories: previous?.stories ?? [], commits: previous?.commits ?? [],
+    repositories: repository ? [repository] : [], selectedRepository: repository,
+    changes: previous?.changes.filter(change => sameSource(change.service)) ?? [], stories: previous?.stories ?? [], commits: previous?.commits ?? [],
   };
 }

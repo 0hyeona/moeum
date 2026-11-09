@@ -1,12 +1,17 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { createAnalysis, todayLabel, type Analysis, type AnalysisMode, type Project, type Service, type Story, type StoryFields } from '../data/projects';
 import * as projectApi from '../api/projects';
+import { activityLoaders } from '../api/activities';
+import { replaceServiceChanges, type ActivityState } from '../data/activity';
+import { services } from '../data/projects';
+
 import { SessionSkeleton } from '../components/Skeleton';
 import boundaryStyles from '../components/AuthBoundary.module.css';
 import { useAuth } from './AuthContext';
 import { Navigate } from 'react-router';
 import { ApiError } from '../api/client';
 import { clearAccessToken } from '../api/auth';
+import { useFigmaActivities } from './useFigmaActivities';
 
 export type NewProject = { name: string; description: string; urls: Record<Service, string> };
 
@@ -62,6 +67,44 @@ function useProjectsState() {
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [storyDrafts, setStoryDrafts] = useState<Record<string, Record<string, Partial<StoryFields>>>>({});
   const activeProject = projects.find((project) => project.id === activeProjectId);
+  const figma = useFigmaActivities(user.id, activeProject, setProjects);
+  type OtherService = Exclude<Service, 'Figma'>;
+  const [activityAttempt, setActivityAttempt] = useState<Record<OtherService, number>>({ GitHub: 0, Notion: 0 });
+  const [activityResults, setActivityResults] = useState<Record<string, ActivityState>>({});
+  const activityKey = JSON.stringify([activeProjectId, ...services.map(service => activeProject?.urls?.[service] ?? '')]);
+  const getActivityState = (service: OtherService): ActivityState => !activeProject?.urls?.[service]
+    ? { status: 'disconnected' } : activityResults[activityKey + service] ?? { status: 'loading' };
+  const activityStates = { GitHub: getActivityState('GitHub'), Figma: figma.listState, Notion: getActivityState('Notion') };
+  function refreshActivities(service: OtherService) {
+    setActivityAttempt(value => ({ ...value, [service]: value[service] + 1 }));
+  }
+  const githubSync = activityStates.GitHub;
+  const refreshGithubChanges = () => refreshActivities('GitHub');
+
+  function loadActivity(service: OtherService) {
+    if (!activeProjectId) return;
+    const controller = new AbortController();
+    const [projectId, ...urls] = JSON.parse(activityKey) as string[];
+    const index = services.indexOf(service);
+      const loader = activityLoaders[service];
+      const url = urls[index];
+      if (!url || !loader) return;
+      const key = activityKey + service;
+      setActivityResults(current => ({ ...current, [key]: { status: 'loading' } }));
+      Promise.resolve().then(() => loader({ projectId, service, url, signal: controller.signal })).then(incoming => {
+        if (controller.signal.aborted) return;
+        setProjects(current => current.map(project => project.id === projectId && project.urls?.[service] === url
+          ? replaceServiceChanges(project, service, incoming) : project));
+        setActivityResults(current => ({ ...current, [key]: { status: 'ready' } }));
+      }).catch(error => {
+        if (!controller.signal.aborted) setActivityResults(current => ({ ...current, [key]: {
+          status: 'error', error: error instanceof Error ? error.message : service + ' 변경사항을 불러오지 못했어요.',
+        } }));
+      });
+    return () => controller.abort();
+  }
+  useEffect(() => loadActivity('GitHub'), [activityKey, activityAttempt.GitHub]);
+  useEffect(() => loadActivity('Notion'), [activityKey, activityAttempt.Notion]);
 
   // 프로젝트와 출처 조합별로 입력한 필드만 보관해 다른 Story에 섞이지 않게 합니다.
   function draftKey(storyId?: string) {
@@ -183,7 +226,7 @@ function useProjectsState() {
       return existing.id;
     }
     const sources = [...new Set(activeProject?.changes.filter((change) => analysis?.changeIds.includes(change.id)).map((change) => change.service))];
-    const story: Story = { ...fields, id: crypto.randomUUID(), status: '완료', sources, date: todayLabel() };
+    const story: Story = { ...fields, sourceChangeIds: analysis?.changeIds ?? [], id: crypto.randomUUID(), status: '완료', sources, date: todayLabel() };
     updateActive((project) => ({
       ...project,
       stories: [story, ...project.stories],
@@ -203,6 +246,7 @@ function useProjectsState() {
     loading, loadError, expired, retry: () => setAttempt(value => value + 1),
     projects,
     activeProject,
+    githubSync, refreshGithubChanges, activityStates, refreshActivities, figma,
     selectProject,
     createProject,
     updateProject,

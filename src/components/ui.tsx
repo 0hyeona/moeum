@@ -21,7 +21,7 @@ export function PageHeading({ title, description }: { title: string; description
 }
 
 type BadgeTone = 'green' | 'blue' | 'yellow' | 'gray';
-const statusTones: Partial<Record<ProjectStatus | StoryStatus, BadgeTone>> = { '진행 중': 'green', '완료': 'blue', '초안': 'yellow' };
+const statusTones: Partial<Record<ProjectStatus | StoryStatus, BadgeTone>> = { '진행중': 'green', '진행 중': 'green', '완료': 'blue', '초안': 'yellow' };
 
 export function Badge({ children, tone = 'gray' }: { children: ReactNode; tone?: BadgeTone }) {
   return <span className={`${styles.badge} ${styles[tone]}`}>{children}</span>;
