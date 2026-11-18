@@ -10,6 +10,7 @@ export type ActivityState =
 // Frontend view model; map the confirmed backend schema to these fields.
 export type ActivityItem = {
   id: string;
+  activityId?: number;
   service: Service;
   title: string;
   description?: string | null;
@@ -28,6 +29,7 @@ export function toChange(item: ActivityItem, now = new Date()): Change {
   const day = valid ? Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) : null;
   return {
     id: `${item.service.toLowerCase()}:${item.id}`, service: item.service,
+    activityId: item.activityId,
     title: item.title, description: item.description ?? '',
     reference: item.reference ?? item.id, status: item.status ?? '업데이트',
     labels: item.labels ?? [], before: item.before ?? '', after: item.after ?? '',

@@ -3,7 +3,7 @@ import plusIcon from '../../assets/icons/plus.svg';
 import tagCloseIcon from '../../assets/icons/tag-close.svg';
 import styles from './TagEditor.module.css';
 
-const maxTagLength = 20;
+const maxTagLength = 40;
 
 type TagEditorProps = {
   tags: string[];
@@ -27,7 +27,7 @@ export function TagEditor({ tags, onChange, label = '태그' }: TagEditorProps) 
 
   function add(value: string) {
     const tag = value.trim().slice(0, maxTagLength);
-    if (tag && !tags.some((item) => item.toLowerCase() === tag.toLowerCase())) onChange([...tags, tag]);
+    if (tags.length < 10 && tag && !tags.some((item) => item.toLowerCase() === tag.toLowerCase())) onChange([...tags, tag]);
   }
 
   function open() {
@@ -97,7 +97,7 @@ export function TagEditor({ tags, onChange, label = '태그' }: TagEditorProps) 
             onBlur={handleBlur}
           />
         ) : (
-          <button ref={addButton} type="button" className={styles.add} onClick={open}>
+          <button ref={addButton} type="button" className={styles.add} disabled={tags.length >= 10} onClick={open}>
             <img src={plusIcon} alt="" width="18" height="18" />
             태그 추가
           </button>
