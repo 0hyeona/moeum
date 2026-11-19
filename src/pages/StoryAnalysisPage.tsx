@@ -1,8 +1,7 @@
-import { useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router';
 import type { Change } from '../data/projects';
 import { useProjects } from '../state/ProjectsContext';
-import { ModeOptions } from '../components/ModeOptions';
 import { SelectedChangeCard } from '../components/SelectedChangeCard';
 import { TagEditor } from '../components/TagEditor';
 import { PageHeading, useDocumentTitle } from '../components/ui';
@@ -19,9 +18,22 @@ export function StoryAnalysisPage() {
     clearAnalysis,
     selectedChangeIds,
     toggleChange,
-    updateAnalysis,
+    updateAnalysis, createStoryDraft, analyzing, analysisError, cancelAnalysis,
   } = useProjects();
   const navigate = useNavigate();
+  useEffect(() => () => cancelAnalysis(), [cancelAnalysis]);
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState('');
+  const creatingRef = useRef(false);
+  async function startWriting() {
+    if (creatingRef.current || analyzing) return;
+    creatingRef.current = true;
+    setCreating(true);
+    setCreateError('');
+    try { navigate(`/stories/${await createStoryDraft()}/edit`, { replace: true }); }
+    catch (error) { setCreateError(error instanceof Error ? error.message : '초안을 저장하지 못했어요.'); }
+    finally { creatingRef.current = false; setCreating(false); }
+  }
   const changesHeading = useRef<HTMLHeadingElement>(null);
   if (!project) return <Navigate to="/projects" replace />;
   if (!analysis) return <Navigate to="/changes" replace />;
@@ -33,7 +45,8 @@ export function StoryAnalysisPage() {
 
   // 남은 변경사항으로 분석을 다시 만들고, 마지막 하나까지 빼면 변경사항 선택 화면으로 돌아갑니다.
   // 뒤로 가기로 비워진 분석 화면에 돌아오지 않도록 기록을 교체합니다.
-  function removeChange(id: string) {
+  async function removeChange(id: string) {
+    if (analyzing || creatingRef.current) return;
     const rest = changeIds.filter((item) => item !== id);
     if (!rest.length) {
       if (selectedChangeIds.includes(id)) toggleChange(id);
@@ -41,14 +54,14 @@ export function StoryAnalysisPage() {
       navigate('/changes', { replace: true });
       return;
     }
-    analyze(rest);
+    await analyze(rest);
     changesHeading.current?.focus();
   }
 
   return (
     <div className={styles.page}>
       <PageHeading title="Story 만들기" description="선택한 변경사항을 하나의 Story로 정리해보세요." />
-      <div className={styles.layout}>
+      <fieldset className={styles.layout} disabled={creating || analyzing} style={{ border: 0, margin: 0, padding: 0, minWidth: 0 }}>
         <section
           className={`${styles.panel} ${styles.selection}`}
           aria-labelledby="selected-changes-heading"
@@ -58,7 +71,7 @@ export function StoryAnalysisPage() {
               선택된 변경사항
             </h2>
             <p className={styles.count}><strong>{changes.length}</strong>개</p>
-            <Link to="/changes" className={styles.resetButton}>변경사항 재설정</Link>
+            <Link to="/changes" onClick={clearAnalysis} className={styles.resetButton}>변경사항 재설정</Link>
           </div>
           <ul className={styles.changes}>
             {changes.map((change) => (
@@ -67,16 +80,14 @@ export function StoryAnalysisPage() {
               </li>
             ))}
           </ul>
-          <div className={styles.mode}>
-            <h3>분석 방식</h3>
-            <ModeOptions value={analysis.mode} />
-          </div>
+          {analyzing && <p role="status">남은 변경사항을 다시 분석하고 있어요…</p>}
+          {analysisError && <p role="alert">{analysisError}</p>}
         </section>
 
         <div className={styles.result}>
           <section className={styles.panel} aria-labelledby="analysis-result-heading">
             <h2 id="analysis-result-heading">AI Story 분석 결과</h2>
-            <p className={styles.description}>선택한 변경사항으로 만든 예시예요. 내용을 자유롭게 수정할 수 있어요.</p>
+            <p className={styles.description}>AI가 생성한 초안이에요. 내용을 확인하고 자유롭게 수정해주세요.</p>
             <div className={styles.fields}>
               <div className={form.field} role="group" aria-labelledby="analysis-tags-label">
                 <span id="analysis-tags-label" className={form.label}>태그</span>
@@ -88,7 +99,7 @@ export function StoryAnalysisPage() {
                   id="analysis-title"
                   className={form.input}
                   placeholder="Story 제목을 입력해주세요."
-                  maxLength={100}
+                  maxLength={200}
                   autoComplete="off"
                   value={analysis.title}
                   onChange={(event) => updateAnalysis({ title: event.target.value })}
@@ -103,6 +114,7 @@ export function StoryAnalysisPage() {
                       id="analysis-before"
                       className={form.textarea}
                       rows={2}
+                      maxLength={3000}
                       placeholder="변경 전 상황을 입력해주세요."
                       value={analysis.before}
                       onChange={(event) => updateAnalysis({ before: event.target.value })}
@@ -114,6 +126,7 @@ export function StoryAnalysisPage() {
                       id="analysis-after"
                       className={form.textarea}
                       rows={2}
+                      maxLength={3000}
                       placeholder="변경 후 달라진 점을 입력해주세요."
                       value={analysis.after}
                       onChange={(event) => updateAnalysis({ after: event.target.value })}
@@ -127,6 +140,7 @@ export function StoryAnalysisPage() {
                   id="analysis-summary"
                   className={`${form.textarea} ${styles.summary}`}
                   rows={4}
+                  maxLength={3000}
                   placeholder="변경사항을 요약해주세요."
                   value={analysis.summary}
                   onChange={(event) => updateAnalysis({ summary: event.target.value })}
@@ -134,15 +148,17 @@ export function StoryAnalysisPage() {
               </div>
             </div>
           </section>
+          {createError && <p role="alert">{createError}</p>}
           <button
             type="button"
             className={`${ui.primaryButton} ${styles.startButton}`}
-            onClick={() => navigate('/stories/new')}
+            disabled={creating || analyzing}
+            onClick={startWriting}
           >
-            Story 작성 시작
+            {creating ? '초안 저장 중…' : 'Story 작성 시작'}
           </button>
         </div>
-      </div>
+      </fieldset>
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { StoryLoadNotice } from '../components/StoryLoadNotice';
 import { useState } from 'react';
 import { Link, Navigate } from 'react-router';
 import type { Service, Story, StoryStatus } from '../data/projects';
@@ -11,7 +12,7 @@ import { PageHeading, useDocumentTitle } from '../components/ui';
 import styles from './TimelinePage.module.css';
 
 const statusOptions: readonly FilterOption<'all' | StoryStatus>[] = [
-  { value: 'all', label: '전체 상태' }, { value: '초안', label: '초안' }, { value: '진행중', label: '진행 중' }, { value: '완료', label: '완료' },
+  { value: 'all', label: '전체 상태' }, { value: '초안', label: '초안' }, { value: '완료', label: '완료' },
 ];
 const sourceOptions: readonly FilterOption<'all' | Service>[] = [
   { value: 'all', label: '전체 출처' }, { value: 'Notion', label: 'Notion' },
@@ -19,7 +20,7 @@ const sourceOptions: readonly FilterOption<'all' | Service>[] = [
 ];
 export function TimelinePage() {
   useDocumentTitle('타임라인');
-  const { activeProject: project } = useProjects();
+  const { activeProject: project, storyListState } = useProjects();
   const [period, setPeriod] = useState<DateRange | null>(null);
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState<'all' | StoryStatus>('all');
@@ -43,7 +44,7 @@ export function TimelinePage() {
   const tagCounts = new Map<string, number>();
   for (const story of project.stories) for (const tag of story.tags) tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1);
   const tags = [...tagCounts].sort((a,b) => b[1]-a[1]).slice(0,6);
-  const stats = [{ label: '전체', count: project.stories.length }, ...(['완료', '진행중', '초안'] as const).map(value => ({ label: value === '진행중' ? '진행 중' : value, count: project.stories.filter(story => story.status === value).length }))];
+  const stats = [{ label: '전체', count: project.stories.length }, ...(['완료', '초안'] as const).map(value => ({ label: value, count: project.stories.filter(story => story.status === value).length }))];
   function resetFilters() { setQuery(''); setStatus('all'); setSource('all'); setPeriod(null); }
   return <>
     <PageHeading title="타임라인" />
@@ -58,6 +59,7 @@ export function TimelinePage() {
         </div>
       </div>
       <section className={styles.timeline} aria-label="날짜별 Story">
+        <StoryLoadNotice />
         <p className={styles.srOnly} role="status">Story {sortedStories.length}개</p>
         {[...months].map(([month, days]) => <section className={styles.month} key={month} aria-label={month}>
           <h2 className={styles.monthHeading}>{Number(month.slice(0,4))}년 {Number(month.slice(5,7))}월</h2>
@@ -66,7 +68,7 @@ export function TimelinePage() {
             <ul className={styles.cards}>{stories.map(story => <li key={story.id}><StoryCard story={story} /></li>)}</ul>
           </div>)}
         </section>)}
-        {!sortedStories.length && <div className={styles.empty}><p>{hasFilters ? '조건에 맞는 Story가 없어요.' : '아직 작성한 Story가 없어요.'}</p>{hasFilters ? <button type="button" className={styles.textButton} onClick={resetFilters}>검색 조건 초기화</button> : <Link className={styles.textButton} to="/changes">변경사항에서 Story 만들기</Link>}</div>}
+        {storyListState.status === 'ready' && !sortedStories.length && <div className={styles.empty}><p>{hasFilters ? '조건에 맞는 Story가 없어요.' : '아직 작성한 Story가 없어요.'}</p>{hasFilters ? <button type="button" className={styles.textButton} onClick={resetFilters}>검색 조건 초기화</button> : <Link className={styles.textButton} to="/changes">변경사항에서 Story 만들기</Link>}</div>}
       </section>
       <aside className={styles.aside} aria-label="프로젝트 Story 요약">
         <section className={styles.panel}><h2>활동 통계</h2><ul className={styles.stats}>{stats.map(stat => <li key={stat.label}>{stat.label} <strong>{stat.count}</strong>개</li>)}</ul></section>

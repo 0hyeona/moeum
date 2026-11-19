@@ -14,6 +14,7 @@ export const analysisModes: readonly AnalysisMode[] = ['의미 중심', '균형'
 // 아직 Story로 정리하지 않은 변경사항(s5 피드 카드, s5·s6 선택 항목 카드)
 export type Change = {
   id: string;
+  activityId?: number; // DB의 변경사항 ID. 분석 및 Story 연결에 사용합니다.
   service: Service;
   reference: string; // 선택 항목 카드 제목에 서비스명 뒤로 붙는 식별자: "GitHub PR #184"
   title: string;
@@ -44,6 +45,9 @@ export type StoryFields = {
 };
 
 export type Story = StoryFields & {
+  projectId?: string;
+  updatedAt?: string;
+  rawAnalysis?: Record<string, unknown>;
   sourceChangeIds?: string[];
   id: string;
   status: StoryStatus;
@@ -79,6 +83,7 @@ export type Project = {
 
 // s6 AI Story 분석 결과. 실제 AI 대신 선택한 변경사항으로 예시 결과를 만듭니다.
 export type Analysis = {
+  projectId?: string;
   changeIds: string[];
   mode: AnalysisMode;
   tags: string[];

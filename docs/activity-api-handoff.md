@@ -1,5 +1,7 @@
 # Figma·Notion 변경사항 API 인수인계
 
+> 이 문서는 초기 수집 연동 기록입니다. 이후 Story·AI 분석·GitHub 서버 수집 연결은 [Story API 연동](story-api-integration.md)을 참고하세요.
+
 ## 연결 완료 범위
 - `src/api/externalActivities.ts`: MOEUM 액세스 토큰으로 수집 후 미정리 변경사항 조회.
 - `src/api/activities.ts`: Figma·Notion 로더 등록. GitHub 기존 조회 유지.
@@ -37,5 +39,4 @@ Notion은 전체 과거 편집 기록·하위 페이지를 수집하지 않습�
 6. 수집 실패 시 오류/재시도, 결과가 없으면 0개가 표시되는지 확인합니다.
 
 ## 다른 담당자에게 남기는 범위
-GitHub 백엔드 수집/조회 전환, 대시보드 요약 API, Story CRUD, AI 분석, 수집 이력 API는 추가 연결하지 않았습니다.
-현재 Story 작성·정리는 프론트 메모리 상태입니다. 서버 저장·복원은 별도 연결이 필요합니다.
+후속 작업에서 GitHub 백엔드 수집/조회, Story CRUD, AI 분석을 연결했습니다. 대시보드 요약 API와 수집 이력 API는 별도 연결 범위입니다.

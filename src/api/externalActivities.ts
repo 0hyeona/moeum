@@ -3,7 +3,7 @@ import { getAccessToken } from './auth';
 import { toChange } from '../data/activity';
 import type { Change } from '../data/projects';
 
-type ExternalService = 'Figma' | 'Notion';
+type ExternalService = 'Figma' | 'Notion' | 'GitHub';
 type ExternalRequest = { projectId: string; service: ExternalService; signal: AbortSignal };
 type SyncResult = { source: string; has_next: boolean; next_cursor: string | null };
 type FigmaSyncStatus = { running: boolean; can_sync: boolean; retry_after_seconds: number; next_sync_at: string | null };
@@ -112,7 +112,7 @@ export async function loadExternalActivities(input: ExternalRequest): Promise<Ch
       // Database datetimes are UTC; older responses may omit the timezone suffix.
       const date = item.occurred_at;
       const occurredAt = date && !/(Z|[+-]\d{2}:\d{2})$/i.test(date) ? `${date}Z` : date;
-      changes.push(toChange({ id: String(item.activity_id), service, title: item.title,
+      changes.push(toChange({ id: String(item.activity_id), activityId: item.activity_id, service, title: item.title,
         description: item.description, occurredAt, reference: item.source_url ?? item.external_id ?? String(item.activity_id) }));
     }
     if (page.length < 100) return changes;

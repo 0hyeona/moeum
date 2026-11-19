@@ -40,3 +40,8 @@
   .tagsHeading h2 { font-size: 16px; line-height: 22px; }
   .memo textarea { min-height: 120px; }
 }
+
+fieldset.columns { border: 0; margin: 0; padding: 0; min-width: 0; }
+.saveActions { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 16px; }
+.saveActions p { width: 100%; margin: 0; text-align: center; }
+.newStory { max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }

@@ -1,6 +1,6 @@
-import { useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router';
-import { emptyStoryFields, type StoryFields } from '../data/projects';
+import { emptyStoryFields, type Story, type StoryFields } from '../data/projects';
 import { useProjects, useStory } from '../state/ProjectsContext';
 import { TagEditor } from '../components/TagEditor';
 import { PageHeading, useDocumentTitle } from '../components/ui';
@@ -8,7 +8,7 @@ import form from '../components/form.module.css';
 import ui from '../components/ui.module.css';
 import styles from './StoryWritePage.module.css';
 
-const description = 'Story 제목을 제외한 항목은 자유롭게 작성할 수 있어요. 작성 중인 내용은 페이지를 이동해도 유지되며, 새로고침하면 초기화됩니다.';
+const description = '입력한 내용은 자동으로 저장돼요. 제목을 제외한 항목은 자유롭게 작성할 수 있어요.';
 
 type TextFieldKey = 'why' | 'problem' | 'solution' | 'result' | 'learned' | 'next';
 
@@ -23,46 +23,50 @@ const textFields: readonly { key: TextFieldKey; label: string; hint?: string; pl
 
 export function StoryWritePage() {
   const { storyId } = useParams();
-  const editing = storyId !== undefined;
-  const title = editing ? 'Story 수정' : 'Story 작성';
-  useDocumentTitle(title);
-  const { activeProject: project, analysis } = useProjects();
-  const { story, switching } = useStory(storyId);
+  const { activeProject: project, clearAnalysis } = useProjects();
+  const { story, switching, error, retry } = useStory(storyId);
+  useEffect(() => { if (storyId) clearAnalysis(); }, [storyId, clearAnalysis]);
+  useDocumentTitle(story?.status === '완료' ? 'Story 수정' : 'Story 작성');
   if (!project) return <Navigate to="/projects" replace />;
+  if (!storyId) return <NewStory key={project.id} />;
+  if (switching) return <p role="status">Story를 불러오는 중이에요…</p>;
+  if (error || !story) return <div className={styles.notFound}>
+    <p role="alert">{error || 'Story를 찾을 수 없어요.'}</p>
+    <button type="button" className={ui.secondaryButton} onClick={retry}>다시 불러오기</button>
+    <Link to="/timeline">타임라인으로 돌아가기</Link>
+  </div>;
+  return <StoryForm key={story.id} story={story} />;
+}
 
-  if (editing && !story) {
-    if (switching) return null;
-    return (
-      <div className={styles.page}>
-        <PageHeading title={title} />
-        <div className={styles.notFound}>
-          <p>Story를 찾을 수 없어요.</p>
-          <Link to="/timeline">타임라인으로 돌아가기</Link>
-        </div>
-      </div>
-    );
+function NewStory() {
+  const { createStoryDraft } = useProjects();
+  const navigate = useNavigate();
+  const [title, setTitle] = useState('');
+  const [error, setError] = useState('');
+  const [pending, setPending] = useState(false);
+  const lock = useRef(false);
+  async function create(event: FormEvent) {
+    event.preventDefault();
+    if (lock.current) return;
+    if (!title.trim()) { setError('Story 제목을 입력해주세요.'); return; }
+    lock.current = true;
+    setPending(true);
+    setError('');
+    try {
+      const id = await createStoryDraft({ ...emptyStoryFields, title: title.trim() });
+      navigate(`/stories/${id}/edit`, { replace: true });
+    } catch (cause) { setError(cause instanceof Error ? cause.message : '초안을 저장하지 못했어요.'); }
+    finally { lock.current = false; setPending(false); }
   }
-
-  // 새 Story는 s6 분석 결과(제목·태그·요약·변경 전후)로 채워서 시작합니다.
-  let initialFields = emptyStoryFields;
-  let aiTags: readonly string[] = [];
-  if (story) {
-    initialFields = storyFields(story);
-  } else if (analysis) {
-    const { title, tags, summary, before, after } = analysis;
-    initialFields = { ...emptyStoryFields, title, tags, summary, before, after };
-    aiTags = tags;
-  }
-
-  return (
-    <StoryForm
-      key={JSON.stringify([project.id, storyId ?? 'new', storyId ? [] : [...(analysis?.changeIds ?? [])].sort()])}
-      heading={title}
-      storyId={story?.id}
-      initialFields={initialFields}
-      aiTags={aiTags}
-    />
-  );
+  return <div className={styles.page}>
+    <PageHeading title="Story 직접 작성" description="제목을 입력하면 초안을 만들고 회고 작성을 시작해요." />
+    <form className={styles.newStory} onSubmit={create}>
+      <label className={form.label} htmlFor="new-story-title">Story 제목</label>
+      <input id="new-story-title" className={form.input} value={title} maxLength={200} required disabled={pending} onChange={event => setTitle(event.target.value)} />
+      {error && <p role="alert" className={form.error}>{error}</p>}
+      <button className={ui.primaryButton} disabled={pending}>{pending ? '초안 저장 중…' : '초안 만들고 작성하기'}</button>
+    </form>
+  </div>;
 }
 
 // Story의 id·상태·날짜 등은 빼고 작성 화면에서 다루는 항목만 꺼냅니다.
@@ -70,47 +74,92 @@ function storyFields({ title, why, problem, solution, result, learned, next, mem
   return { title, why, problem, solution, result, learned, next, memo, summary, before, after, tags };
 }
 
-type StoryFormProps = {
-  heading: string;
-  storyId?: string;
-  initialFields: StoryFields;
-  aiTags: readonly string[];
-};
-
-// 직접 입력한 필드는 페이지 이동 후에도 복원하고, 나머지는 최신 분석 결과로 채웁니다.
-function StoryForm({ heading, storyId, initialFields, aiTags }: StoryFormProps) {
+function StoryForm({ story }: { story: Story }) {
   const { saveStory, getStoryDraft, updateStoryDraft } = useProjects();
+  const storyId = story.id;
   const navigate = useNavigate();
   const titleInput = useRef<HTMLInputElement>(null);
-  const fields = { ...initialFields, ...getStoryDraft(storyId) };
+  const draft = getStoryDraft(storyId) ?? {};
+  const fields = { ...storyFields(story), ...draft };
+  const signature = JSON.stringify(draft);
+  const dirty = Object.keys(draft).length > 0;
   const [titleError, setTitleError] = useState('');
-  // 같은 오류로 다시 제출해도 스크린 리더가 알림을 다시 읽도록 매번 새로 렌더링합니다.
   const [errorCount, setErrorCount] = useState(0);
-  // AI가 제안한 태그가 하나라도 남아 있을 때만 'AI 생성' 표시를 보여줍니다.
-  const showAiBadge = fields.tags.some((tag) => aiTags.includes(tag));
+  const [saveError, setSaveError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [finishing, setFinishing] = useState(false);
+  const action = useRef(false);
+  const pending = useRef(0);
+  const mounted = useRef(true);
+  const submitted = useRef('');
+  const latest = useRef({ fields, draft, dirty, signature });
+  latest.current = { fields, draft, dirty, signature };
+  const save = useRef(saveStory);
+  save.current = saveStory;
+  const heading = story.status === '완료' ? 'Story 수정' : 'Story 작성';
+
+  async function persist(values: Partial<StoryFields>, status?: 'draft' | 'published') {
+    pending.current++;
+    submitted.current = JSON.stringify(values);
+    if (mounted.current) { setSaving(true); setSaveError(''); }
+    try { await save.current(values, storyId, status); return true; }
+    catch (cause) {
+      submitted.current = '';
+      if (mounted.current) setSaveError(cause instanceof Error ? cause.message : '저장하지 못했어요. 입력 내용은 유지됩니다.');
+      return false;
+    } finally {
+      pending.current--;
+      if (mounted.current) setSaving(pending.current > 0);
+    }
+  }
+  const persistRef = useRef(persist);
+  persistRef.current = persist;
+  useEffect(() => {
+    if (!dirty || finishing || !fields.title.trim()) return;
+    const timer = setTimeout(() => { void persistRef.current(latest.current.draft); }, 1000);
+    return () => clearTimeout(timer);
+  }, [signature, dirty, fields.title, finishing]);
+  useEffect(() => {
+    mounted.current = true;
+    const beforeUnload = (event: BeforeUnloadEvent) => {
+      if (latest.current.dirty || pending.current) { event.preventDefault(); event.returnValue = ''; }
+    };
+    window.addEventListener('beforeunload', beforeUnload);
+    return () => {
+      mounted.current = false;
+      window.removeEventListener('beforeunload', beforeUnload);
+      const current = latest.current;
+      if (!action.current && current.dirty && current.fields.title.trim() && submitted.current !== current.signature) {
+        void persistRef.current(current.draft);
+      }
+    };
+  }, []);
 
   function update<K extends keyof StoryFields>(key: K, value: StoryFields[K]) {
     updateStoryDraft({ [key]: value }, storyId);
+    setSaveError('');
   }
-
-  function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function finish(status: 'draft' | 'published') {
+    if (action.current) return;
     const title = fields.title.trim();
     if (!title) {
       setTitleError('Story 제목을 입력해주세요.');
-      setErrorCount((count) => count + 1);
+      setErrorCount(count => count + 1);
       titleInput.current?.focus();
       return;
     }
-    const id = saveStory({ ...fields, title }, storyId);
-    navigate(`/stories/${id}`, { replace: true });
+    action.current = true;
+    setFinishing(true);
+    if (await persist({ ...fields, title }, status)) navigate(`/stories/${storyId}`, { replace: true });
+    else { action.current = false; setFinishing(false); }
   }
+  function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); void finish('published'); }
 
   return (
     <div className={styles.page}>
       <PageHeading title={heading} description={description} />
       <form className={styles.form} onSubmit={submit} noValidate>
-        <div className={styles.columns}>
+        <fieldset className={styles.columns} disabled={finishing}>
           <div className={`${styles.panel} ${styles.template}`}>
             <div className={form.field}>
               <div className={form.labelRow}>
@@ -122,7 +171,7 @@ function StoryForm({ heading, storyId, initialFields, aiTags }: StoryFormProps) 
                 id="story-title"
                 className={form.input}
                 placeholder="이번 작업을 한 문장으로 요약해보세요."
-                maxLength={100}
+                maxLength={200}
                 autoComplete="off"
                 value={fields.title}
                 onChange={(event) => {
@@ -149,6 +198,7 @@ function StoryForm({ heading, storyId, initialFields, aiTags }: StoryFormProps) 
                   id={`story-${field.key}`}
                   className={form.textarea}
                   rows={1}
+                  maxLength={15000}
                   placeholder={field.placeholder}
                   value={fields[field.key]}
                   onChange={(event) => update(field.key, event.target.value)}
@@ -161,7 +211,6 @@ function StoryForm({ heading, storyId, initialFields, aiTags }: StoryFormProps) 
             <section className={`${styles.panel} ${styles.tags}`} aria-labelledby="story-tags-heading">
               <div className={styles.tagsHeading}>
                 <h2 id="story-tags-heading">태그</h2>
-                {showAiBadge && <span className={`${ui.badge} ${ui.blue} ${styles.aiBadge}`}>AI 생성</span>}
               </div>
               <TagEditor tags={fields.tags} onChange={(tags) => update('tags', tags)} />
             </section>
@@ -170,14 +219,21 @@ function StoryForm({ heading, storyId, initialFields, aiTags }: StoryFormProps) 
               <textarea
                 id="story-memo"
                 className={form.textarea}
+                maxLength={15000}
                 placeholder="회고에 참고할 내용이나 기억해두고 싶은 내용을 자유롭게 작성해주세요."
                 value={fields.memo}
                 onChange={(event) => update('memo', event.target.value)}
               />
             </div>
           </div>
+        </fieldset>
+        <div className={styles.saveActions}>
+          <p role="status">{saving ? '저장 중…' : dirty ? '저장되지 않은 변경사항이 있어요.' : '서버에 저장됐어요.'}</p>
+          {saveError && <p className={form.error} role="alert">{saveError}</p>}
+          {saveError && <button type="button" className={ui.secondaryButton} disabled={saving || finishing} onClick={() => void persist(draft)}>저장 다시 시도</button>}
+          {story.status === '초안' && <button type="button" className={ui.secondaryButton} disabled={finishing} onClick={() => void finish('draft')}>초안 저장</button>}
+          <button type="submit" className={ui.primaryButton} disabled={finishing}>{finishing ? '저장 중…' : story.status === '완료' ? '수정 완료' : 'Story 작성 완료'}</button>
         </div>
-        <button type="submit" className={ui.primaryButton}>{storyId ? '수정 완료' : 'Story 작성 완료'}</button>
       </form>
     </div>
   );
