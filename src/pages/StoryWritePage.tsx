@@ -1,19 +1,19 @@
+import { StorySkeleton } from '../components/Skeleton';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router';
 import { emptyStoryFields, type Story, type StoryFields } from '../data/projects';
 import { useProjects, useStory } from '../state/ProjectsContext';
 import { TagEditor } from '../components/TagEditor';
+import { storyDraftFromAnalysis } from '../data/storyDraft';
 import { PageHeading, useDocumentTitle } from '../components/ui';
 import form from '../components/form.module.css';
 import ui from '../components/ui.module.css';
 import styles from './StoryWritePage.module.css';
 
-const description = '입력한 내용은 자동으로 저장돼요. 제목을 제외한 항목은 자유롭게 작성할 수 있어요.';
-
 type TextFieldKey = 'why' | 'problem' | 'solution' | 'result' | 'learned' | 'next';
 
-const textFields: readonly { key: TextFieldKey; label: string; hint?: string; placeholder: string }[] = [
-  { key: 'why', label: 'Why', hint: '선택', placeholder: '이 작업을 시작하게 된 배경이나 이유를 작성해주세요.' },
+const textFields: readonly { key: TextFieldKey; label: string; placeholder: string }[] = [
+  { key: 'why', label: 'Why', placeholder: '이 작업을 시작하게 된 배경이나 이유를 작성해주세요.' },
   { key: 'problem', label: '문제', placeholder: '작업 과정에서 발견한 문제나 개선이 필요했던 점을 작성해주세요.' },
   { key: 'solution', label: '해결과정', placeholder: '문제를 해결하기 위해 어떤 방법을 시도했는지 작성해주세요.' },
   { key: 'result', label: '결과', placeholder: '작업을 통해 무엇이 달라졌는지 작성해주세요.' },
@@ -29,7 +29,7 @@ export function StoryWritePage() {
   useDocumentTitle(story?.status === '완료' ? 'Story 수정' : 'Story 작성');
   if (!project) return <Navigate to="/projects" replace />;
   if (!storyId) return <NewStory key={project.id} />;
-  if (switching) return <p role="status">Story를 불러오는 중이에요…</p>;
+  if (switching) return <StorySkeleton editing />;
   if (error || !story) return <div className={styles.notFound}>
     <p role="alert">{error || 'Story를 찾을 수 없어요.'}</p>
     <button type="button" className={ui.secondaryButton} onClick={retry}>다시 불러오기</button>
@@ -81,6 +81,7 @@ function StoryForm({ story }: { story: Story }) {
   const titleInput = useRef<HTMLInputElement>(null);
   const draft = getStoryDraft(storyId) ?? {};
   const fields = { ...storyFields(story), ...draft };
+  const recommendations = storyDraftFromAnalysis(story);
   const signature = JSON.stringify(draft);
   const dirty = Object.keys(draft).length > 0;
   const [titleError, setTitleError] = useState('');
@@ -157,7 +158,7 @@ function StoryForm({ story }: { story: Story }) {
 
   return (
     <div className={styles.page}>
-      <PageHeading title={heading} description={description} />
+      <PageHeading title={heading} />
       <form className={styles.form} onSubmit={submit} noValidate>
         <fieldset className={styles.columns} disabled={finishing}>
           <div className={`${styles.panel} ${styles.template}`}>
@@ -192,7 +193,7 @@ function StoryForm({ story }: { story: Story }) {
               <div key={field.key} className={form.field}>
                 <div className={form.labelRow}>
                   <label htmlFor={`story-${field.key}`} className={form.label}>{field.label}</label>
-                  {field.hint && <span className={form.hint}>{field.hint}</span>}
+                  {fields[field.key] && fields[field.key] === recommendations[field.key] && <span className={styles.recommendation}>AI 추천 초안</span>}
                 </div>
                 <textarea
                   id={`story-${field.key}`}

@@ -18,6 +18,25 @@
 .heading { display: flex; flex-direction: column; gap: 16px; max-width: 320px; margin-bottom: 48px; }
 .grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: 32px; }
 .panel { display: flex; flex-direction: column; gap: 24px; min-height: 240px; padding: 32px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-card); }
+.storyPage { padding: 0 48px 88px; }
+.storyHeading { display: flex; justify-content: center; padding: 52px 24px; }
+.storyHeading > .title { width: 240px; height: 47px; }
+.storyColumns { display: grid; grid-template-columns: minmax(0, 936fr) minmax(0, 842fr); gap: 48px; max-width: 1512px; margin-inline: auto; align-items: start; }
+.storyEditing { grid-template-columns: minmax(0, 988fr) minmax(0, 476fr); }
+.storySide { display: flex; flex-direction: column; gap: 29px; min-width: 0; }
+.storySide > .panel:first-child { min-height: 120px; }
+.storyField { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.storyField + .storyField { padding-top: 24px; border-top: 1px solid var(--color-border); }
+.storyContent, .storyMemo { min-height: 112px; display: flex; flex-direction: column; gap: 12px; padding: 16px; border-radius: var(--radius-control); background: var(--color-background); }
+.storyMemo { min-height: 249px; }
+@media (max-width: 1439px) { .storyColumns { grid-template-columns: minmax(0, 1fr); gap: 24px; } }
+@media (max-width: 700px) {
+  .storyPage { padding: 0 16px 48px; }
+  .storyHeading { padding: 36px 16px; }
+  .storyHeading > .title { width: 180px; height: 34px; }
+  .storyColumns, .storySide { gap: 16px; }
+  .storyColumns .panel { padding: 20px 16px; }
+}
 @keyframes shimmer { to { transform: translateX(100%); } }
 @media (max-width: 640px) { .header { height: 76px; padding: 0 20px; } .body { padding: 32px 20px; } .grid { grid-template-columns: 1fr; gap: 20px; } .panel { padding: 24px; } }
 @media (prefers-reduced-motion: reduce) { .bone::after { animation: none; transform: none; background: none; } }

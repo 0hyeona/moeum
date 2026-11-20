@@ -7,7 +7,7 @@ import { githubRepository } from '../data/github';
 import { useProjects } from '../state/ProjectsContext';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { NotionConnection } from '../components/NotionConnection';
-import { ServiceIcon, useDocumentTitle } from '../components/ui';
+import { PageHeading, ServiceIcon, useDocumentTitle } from '../components/ui';
 import form from '../components/form.module.css';
 import ui from '../components/ui.module.css';
 import styles from './SettingsPage.module.css';
@@ -38,7 +38,7 @@ export function SettingsPage() {
 
   return (
     <div className={styles.page}>
-      <header className={styles.pageHeader}><h1>프로젝트 설정</h1><p>프로젝트의 기본 정보와 연결된 서비스를 관리해요.</p></header>
+      <PageHeading title="프로젝트 설정" />
       <div className={styles.sections}>
         {/* 헤더에서 프로젝트를 바꾸면 입력 중이던 값을 새 프로젝트 값으로 다시 채웁니다. */}
         <ProjectInfo key={project.id} project={project} />
@@ -54,7 +54,7 @@ export function SettingsPage() {
               </p>
               <p className={styles.alertText}>프로젝트와 모든 Story가 영구적으로 삭제돼요. 필요한 기록을 먼저 확인해주세요.</p>
             </div>
-            <button type="button" className={`${ui.dangerButton} ${styles.deleteButton}`} onClick={() => setConfirming(true)}>프로젝트 삭제</button>
+            <button type="button" className={`${ui.dangerOutlineButton} ${styles.deleteButton}`} onClick={() => setConfirming(true)}>프로젝트 삭제</button>
           </div>
         </section>
       </div>
@@ -208,7 +208,7 @@ function Connections({ project }: { project: Project }) {
   const [pending, setPending] = useState<Service | null>(null);
   const busy = useRef(false);
   const [error, setError] = useState('');
-  const [message, announce] = useAnnouncement();
+  const [message, announce, clearMessage] = useAnnouncement();
 
   const [connections, setConnections] = useState<Connection[] | null>(null);
   const [attempt, setAttempt] = useState(0);
@@ -246,13 +246,14 @@ function Connections({ project }: { project: Project }) {
     }
     busy.current = true;
     setPending(service);
+    clearMessage();
     setError('');
     try {
       const updated = await saveConnection(service, value || null);
       setConnections(updated);
       const url = updated.find(item => item.source === service.toLowerCase())?.external_url ?? '';
       setDraft(current => ({ ...current, [service]: url }));
-      announce(service + (disconnect ? ' URL을 해제했어요.' : ' URL을 저장했어요.'));
+      if (service !== 'Notion' || disconnect) announce(service + (disconnect ? ' URL을 해제했어요.' : ' URL을 저장했어요.'));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : '저장하지 못했습니다.');
     } finally { busy.current = false; setPending(null); }
@@ -277,8 +278,8 @@ function Connections({ project }: { project: Project }) {
               onChange={event => { setDraft(current => ({ ...current, [service]: event.target.value })); setError(''); }} />
           </div>
           <div className={styles.serviceActions}>
-            <button type="button" className={`${styles.smallButton} ${styles.emphasis}`} onClick={() => void save(service)}>{pending === service ? '저장 중…' : '저장'}</button>
-            {connection?.external_url && <button type="button" className={`${styles.smallButton} ${styles.disconnect}`} onClick={() => void save(service, true)}>연결 해제</button>}
+            <button type="button" className={styles.smallButton} onClick={() => void save(service)}>{pending === service ? '저장 중…' : '저장'}</button>
+            {connection?.external_url && <button type="button" className={ui.ghostButton} onClick={() => void save(service, true)}>연결 해제</button>}
           </div>
         </li>; })}
       </ul>

@@ -1,18 +1,24 @@
 .page { padding: 0 48px 169px; }
-/* 제목과 입력 영역 사이는 다른 화면보다 좁게(24px) 둡니다. */
-.page > header { padding-bottom: 24px; }
-.form { display: flex; flex-direction: column; align-items: center; gap: 107px; }
+.form { display: flex; flex-direction: column; align-items: center; gap: 40px; }
 .columns { width: 100%; max-width: 1512px; display: grid; grid-template-columns: minmax(0, 988fr) minmax(0, 476fr); gap: 48px; align-items: start; }
-.panel { min-width: 0; padding: 32px; border-radius: var(--radius-control); background: var(--color-surface); }
+.panel { min-width: 0; padding: 32px; border: 1px solid var(--color-border); border-radius: var(--radius-control); background: var(--color-surface); }
 
 /* 회고 템플릿 */
 .template { --field-gap: 10px; display: flex; flex-direction: column; gap: 30px; }
+.recommendation { color: var(--color-muted); font-size: 13px; line-height: 20px; }
+.template > div + div { padding-top: 24px; border-top: 1px solid var(--color-border); }
+.panel label, .newStory label { font-size: 18px; line-height: 26px; font-weight: 600; }
+.template label + span, .template label ~ span { font-size: 13px; line-height: 20px; font-weight: 400; }
+.panel input, .newStory input { line-height: 26px; }
+.template input { font-size: 18px; font-weight: 500; }
+.panel textarea { min-height: 112px; padding: 14px 16px; font-size: 16px; line-height: 1.8; background: var(--color-background); }
+.panel textarea:focus { background: var(--color-surface); }
 
 /* 태그, 메모 */
 .side { min-width: 0; display: flex; flex-direction: column; gap: 29px; }
-.tags { padding-block: 16px; display: flex; flex-direction: column; gap: 16px; }
+.tags { padding-block: 24px; display: flex; flex-direction: column; gap: 16px; }
 .tagsHeading { display: flex; align-items: center; gap: 10px; min-height: 26px; }
-.tagsHeading h2 { margin: 0; font-size: 20px; line-height: 24px; font-weight: 400; }
+.tagsHeading h2 { margin: 0; font-size: 18px; line-height: 26px; font-weight: 600; }
 .tagsHeading .aiBadge { padding: 3px 8px; font-size: 12px; line-height: 18px; }
 .memo textarea { min-height: 249px; }
 
@@ -29,13 +35,16 @@
 }
 @media (max-width: 700px) {
   .page { padding: 0 16px 48px; }
-  .page > header { padding-bottom: 16px; }
   .form { gap: 32px; }
   .columns, .side { gap: 16px; }
   .panel { padding: 20px 16px; }
   /* 좁은 화면에서는 긴 안내 문구가 어절 단위로 줄바꿈되도록 합니다. */
   .panel textarea { word-break: keep-all; }
   .template { --field-gap: 8px; gap: 20px; }
+  .template > div + div { padding-top: 20px; }
+  .panel label, .newStory label { font-size: 16px; line-height: 24px; }
+  .panel textarea { min-height: 104px; padding: 12px; font-size: 15px; }
+  .template input { font-size: 16px; }
   .tags { padding-block: 16px; gap: 12px; }
   .tagsHeading h2 { font-size: 16px; line-height: 22px; }
   .memo textarea { min-height: 120px; }
@@ -43,5 +52,7 @@
 
 fieldset.columns { border: 0; margin: 0; padding: 0; min-width: 0; }
 .saveActions { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 16px; }
-.saveActions p { width: 100%; margin: 0; text-align: center; }
-.newStory { max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+.saveActions p { width: 100%; margin: 0; color: var(--color-muted); font-size: 14px; line-height: 22px; text-align: center; }
+.saveActions p[role='alert'] { color: var(--color-error); }
+.newStory { max-width: 640px; margin: 0 auto; padding: 32px; border: 1px solid var(--color-border); border-radius: var(--radius-control); background: var(--color-surface); display: flex; flex-direction: column; gap: 16px; }
+@media (max-width: 700px) { .newStory { padding: 24px 16px; } }

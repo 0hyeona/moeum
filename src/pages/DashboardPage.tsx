@@ -1,6 +1,7 @@
 import { StoryLoadNotice } from '../components/StoryLoadNotice';
 import { useEffect, useRef, useState } from 'react';
 import { startNotionConnection } from '../api/notion';
+import { needsNotionConnection } from '../data/notionConnectionState';
 import { Link, Navigate } from 'react-router';
 import type { ActivityState } from '../data/activity';
 import { services, type ServiceState } from '../data/projects';
@@ -37,6 +38,7 @@ export function DashboardPage() {
           <ul className={styles.stats}>
             {services.map(service => {
               const state = activityStates[service];
+              const needsConnection = service === 'Notion' && needsNotionConnection(state);
               const count = project.changes.filter(change => change.service === service).length;
               const showFigmaControls = service === 'Figma' && Boolean(project.urls?.Figma);
               const retryAt = showFigmaControls ? figma.retryAt : undefined;
@@ -46,15 +48,16 @@ export function DashboardPage() {
                     <span className={styles.statIcon}><ServiceIcon service={service} size={18} /></span>
                     {service}
                   </span>
-                  <PendingCount sync={state.status} state={project.services[service]} count={count} />
+                  {!needsConnection && <PendingCount sync={state.status} state={project.services[service]} count={count} />}
                   <div className={styles.statActions}>
+                    {needsConnection && <NotionConnectAction />}
                     {showFigmaControls && (
                       <button type="button" className={styles.statButton} disabled={figma.refreshDisabled}
                         onClick={figma.refresh} aria-label={figma.syncing || retryAt !== undefined ? undefined : 'Figma 새로고침'}>
                         {figma.syncing ? '수집 중…' : retryAt !== undefined ? '수집 대기 중' : '새로고침'}
                       </button>
                     )}
-                    {service === 'Notion' && project.urls?.Notion && (
+                    {service === 'Notion' && !needsConnection && project.urls?.Notion && (
                       <button type="button" className={styles.statButton} disabled={state.status === 'loading'}
                         onClick={() => refreshActivities(service)} aria-label={state.status === 'ready' ? 'Notion 새로고침' : undefined}>
                         {state.status === 'loading' ? '수집 중…' : state.status === 'error' ? '다시 시도' : '새로고침'}
@@ -65,10 +68,7 @@ export function DashboardPage() {
                     )}
                   </div>
                   <div className={styles.statNotes}>
-                    {service === 'Notion' && state.status === 'error' && (
-                      <NotionConnectAction />
-                    )}
-                    {state.status === 'error' && <p className={styles.statError} role="alert">{state.error}</p>}
+                    {state.status === 'error' && !needsConnection && <p className={styles.statError} role="alert">{state.error}</p>}
                     {state.status === 'error' && service === 'Figma' && (
                       <button type="button" className={styles.statButton} disabled={figma.syncing} onClick={figma.reload}>목록 다시 조회</button>
                     )}
@@ -138,7 +138,7 @@ function NotionConnectAction() {
 
   return <>
     <button type="button" className={styles.statButton} disabled={pending} onClick={() => void connect()}>
-      {pending ? 'Notion 승인 화면 여는 중…' : 'Notion 계정 연결'}
+      {pending ? 'Notion 승인 화면 여는 중…' : 'Notion 페이지 연결'}
     </button>
     {error && <p className={styles.statError} role="alert">{error}</p>}
   </>;

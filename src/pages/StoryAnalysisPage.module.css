@@ -1,36 +1,20 @@
 .page { padding: 0 0 116px; }
-.page > header { padding-bottom: 24px; }
 /* 1920px 기준 좌측 690px, 우측 1013px 비율을 유지합니다. */
-.layout { padding: 0 55px 0 110px; display: grid; grid-template-columns: minmax(0, 690fr) minmax(0, 1013fr); gap: 52px; align-items: start; }
+.layout { border: 0; margin: 0; min-width: 0; padding: 0 48px; display: grid; grid-template-columns: minmax(0, 690fr) minmax(0, 1013fr); gap: 52px; align-items: start; }
 
 .panel { min-width: 0; padding: 32px; border-radius: var(--radius-control); background: var(--color-surface); }
 .panel h2 { margin: 0; font-size: 25px; line-height: 30px; font-weight: 700; }
 .panel h2:focus { outline: none; }
 
 /* 선택된 변경사항 */
-.selection { display: flex; flex-direction: column; gap: 32px; }
+.selection { position: sticky; top: 24px; max-height: calc(100dvh - 48px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; display: flex; flex-direction: column; gap: 32px; }
+.selection > * { flex-shrink: 0; }
 .selectionHeader { display: flex; align-items: center; gap: 32px; }
 .selectionHeader h2 { flex: 1; min-width: 0; }
 .count { flex: none; margin: 0; display: flex; align-items: center; gap: 4px; font-size: 13px; line-height: 24px; white-space: nowrap; }
 .count strong { color: var(--color-primary); font-size: 20px; }
-.resetButton {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 30px;
-  padding: 0 8px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-control);
-  background: var(--color-surface);
-  color: var(--color-muted);
-  font-size: 13px;
-  line-height: 18px;
-  text-decoration: none;
-  white-space: nowrap;
-  transition: border-color 150ms, color 150ms;
-}
-.resetButton:hover { border-color: var(--color-primary); color: var(--color-link); }
+.resetButton { composes: secondaryButton from '../components/ui.module.css'; flex: none; }
+.resetButton:hover { background: var(--color-background); color: var(--color-text-strong); }
 .changes { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 16px; }
 .mode { display: flex; flex-direction: column; gap: 32px; padding: 32px; border: 1px solid var(--color-border); border-radius: var(--radius-control); }
 .mode h3 { margin: 0; font-size: 25px; line-height: 30px; font-weight: 700; }
@@ -51,11 +35,11 @@
 @media (max-width: 1439px) {
   .page { padding-bottom: 88px; }
   .layout { padding: 0 48px; grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  .selection { position: static; max-height: none; overflow-y: visible; }
   .result { gap: 32px; }
 }
 @media (max-width: 700px) {
   .page { padding-bottom: 48px; }
-  .page > header { padding-bottom: 16px; }
   .layout { padding: 0 16px; gap: 16px; }
   .panel { padding: 20px 16px; }
   .panel h2, .mode h3 { font-size: 20px; line-height: 26px; }

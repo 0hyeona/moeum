@@ -15,6 +15,7 @@ export const analysisModes: readonly AnalysisMode[] = ['의미 중심', '균형'
 export type Change = {
   id: string;
   activityId?: number; // DB의 변경사항 ID. 분석 및 Story 연결에 사용합니다.
+  occurredAt?: string; // 서비스 간 정렬에 사용할 원본 변경 시각
   service: Service;
   reference: string; // 선택 항목 카드 제목에 서비스명 뒤로 붙는 식별자: "GitHub PR #184"
   title: string;

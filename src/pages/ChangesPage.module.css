@@ -28,7 +28,11 @@
 .meta { color: var(--color-muted); }
 .check { margin-left: auto; }
 .title { margin-top: 15px; font-size: 20px; line-height: 24px; font-weight: 700; word-break: keep-all; overflow-wrap: anywhere; }
-.description { margin-top: 10px; color: var(--color-muted); font-size: 16px; line-height: 22px; word-break: keep-all; overflow-wrap: anywhere; }
+.description { margin-top: 10px; color: var(--color-muted); font-size: 16px; line-height: 22px; word-break: keep-all; overflow-wrap: anywhere; white-space: pre-wrap; }
+.notionDetails { display: flex; flex-direction: column; align-self: stretch; gap: 12px; margin-top: 14px; }
+.diffSection { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border-radius: 8px; background: var(--color-background); }
+.diffLabel { color: var(--color-muted); font-size: 13px; line-height: 18px; }
+.diffContent { font-size: 15px; line-height: 23px; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 230px; overflow-y: auto; }
 .status { display: flex; margin-top: 14px; }
 .hide { position: absolute; top: 24px; right: 15px; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; padding: 0; border: 0; border-radius: 6px; background: none; transition: background-color 150ms; }
 .hide:hover { background: var(--color-border); }
@@ -80,8 +84,8 @@
 .noticeTitle span { font-size: 12px; color: var(--color-muted); }
 .noticeContent p { margin: 8px 0 0; color: var(--color-muted); font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
 .serviceError .noticeTitle span { color: #9b5324; }
-.serviceNotice .textButton { padding: 8px 12px; border: 1px solid var(--color-border-strong); border-radius: 8px; font-size: 14px; white-space: nowrap; text-decoration: none; }
-.serviceNotice .textButton:hover { background: var(--color-selected); }
+.serviceNotice .textButton { display: inline-flex; align-items: center; justify-content: center; min-height: 42px; padding: 10px 16px; border: 1px solid var(--color-border-strong); border-radius: var(--radius-control); background: var(--color-surface); color: var(--color-text-strong); font-size: 15px; line-height: 20px; font-weight: 600; white-space: nowrap; text-decoration: none; }
+.serviceNotice .textButton:hover { border-color: var(--color-subtle); background: var(--color-background); }
 .serviceNotice .textButton:disabled { cursor: default; opacity: .6; background: none; }
 .noticeActions { display: flex; flex-wrap: wrap; gap: 8px; }
 @media (max-width: 520px) { .serviceNotice { grid-template-columns: 32px minmax(0, 1fr); gap: 8px; } .noticeIcon { width: 32px; height: 32px; } .serviceNotice > .textButton, .noticeActions { grid-column: 2; justify-self: start; } }

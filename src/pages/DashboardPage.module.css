@@ -19,8 +19,8 @@
 .count { align-items: baseline; gap: 4px; white-space: nowrap; }
 .count strong { color: var(--color-text-strong); font-size: 32px; font-variant-numeric: tabular-nums; line-height: 38px; letter-spacing: -.04em; }
 .statActions { display: flex; flex-wrap: wrap; align-items: start; gap: 6px; min-height: 34px; }
-.statButton { min-height: 34px; padding: 6px 9px; border: 1px solid var(--color-border-strong); border-radius: 7px; background: var(--color-surface); color: var(--color-text); font-size: 13px; font-weight: 600; line-height: 18px; white-space: nowrap; }
-.statButton:hover:not(:disabled) { border-color: #a8bafa; background: var(--color-selected); color: #315bd6; }
+.statButton { composes: secondaryButton from '../components/ui.module.css'; }
+.statButton:hover:not(:disabled) { border-color: var(--color-subtle); background: var(--color-background); color: var(--color-text-strong); }
 .statButton:disabled { background: transparent; color: var(--color-muted); cursor: default; }
 .stat[data-waiting='true'] .statButton:disabled { border-color: #eddfc7; background: #fff2da; color: #80521b; }
 .statNotes { display: grid; gap: 4px; color: var(--color-muted); font-size: 13px; line-height: 18px; overflow-wrap: anywhere; word-break: keep-all; }
@@ -37,11 +37,13 @@
 
 .commits { min-height: 308px; }
 .branches { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 42px; }
+.commits .panelHeader:has(+ .branches) { padding-bottom: 8px; }
+.commits .branches { margin-top: 0; padding-bottom: 24px; }
 .branch { min-height: 28px; max-width: 100%; padding: 4px 8px; border: 1px solid var(--color-subtle); border-radius: var(--radius-control); background: rgb(238 239 242 / 60%); color: var(--color-muted); font-size: 13px; line-height: 18px; overflow-wrap: anywhere; }
 .branch:hover { border-color: var(--color-muted); }
 .branch[aria-pressed='true'] { background: #3d3d3f; border-color: #3d3d3f; color: var(--color-border); }
 .tableScroll { margin-top: 42px; overflow-x: auto; }
-.branches + .tableScroll { margin-top: 16px; }
+.commits .branches + .tableScroll { margin-top: 0; }
 .table { width: 100%; min-width: 720px; border-collapse: collapse; table-layout: fixed; text-align: left; font-size: 16px; line-height: 22px; }
 .narrowColumn { width: 16.5%; }
 .messageColumn { width: 40.1%; }

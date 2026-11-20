@@ -109,16 +109,26 @@ test('malformed and wrong-project responses are rejected', async t => {
   mock(t, () => json([row({ project_id: 8 })]));
   await assert.rejects(api.listStories('7'), /응답 형식/);
 });
-test('analysis uses the deployed contract and propagates AI service failure', async t => {
+test('analysis sends the selected mode and propagates server failures', async t => {
   let attempt = 0;
   mock(t, (url, options) => {
     assert.equal(url, '/backend/stories/analyze');
-    assert.deepEqual(JSON.parse(options.body), { project_id: 7, activity_ids: [101] });
+    assert.deepEqual(JSON.parse(options.body), { project_id: 7, activity_ids: [101], mode: 'semantic' });
     return attempt++ ? json({ detail: 'AI 분석 설정 필요' }, 503) : json({ title: 'AI 제목', summary: '요약', tags: ['UI'], before: null, after: '개선' });
   });
   const selected = [{ activityId: 101 }];
   assert.equal((await api.analyzeActivities('7', selected)).title, 'AI 제목');
   await assert.rejects(api.analyzeActivities('7', selected), error => error.status === 503);
+});
+test('all three analysis modes are transmitted without changing selected activity IDs', async t => {
+  for (const [label, expected] of [['의미 중심', 'semantic'], ['균형', 'balanced'], ['코드 상세', 'code']]) {
+    mock(t, (_, options) => {
+      assert.deepEqual(JSON.parse(options.body), { project_id: 7, activity_ids: [101], mode: expected });
+      return json({ title: '분석', summary: '기록 요약', tags: ['github'], before: null, after: null });
+    });
+    const result = await api.analyzeActivities('7', [{ activityId: 101 }], undefined, label);
+    assert.equal(result.summary, '기록 요약');
+  }
 });
 test('GitHub sync walks branches and pages before returning DB activity IDs', async t => {
   const calls = [];

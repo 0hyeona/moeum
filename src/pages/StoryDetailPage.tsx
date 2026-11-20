@@ -1,3 +1,4 @@
+import { StorySkeleton } from '../components/Skeleton';
 import { useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router';
 import type { Story } from '../data/projects';
@@ -57,7 +58,7 @@ export function StoryDetailPage() {
   const [deleteError, setDeleteError] = useState('');
   if (!project) return <Navigate to="/projects" replace />;
 
-  if (switching) return <p role="status">Story를 불러오는 중이에요…</p>;
+  if (switching) return <StorySkeleton />;
   if (error || !story) {
     return (
       <div className={styles.page}>
@@ -87,17 +88,12 @@ export function StoryDetailPage() {
         <section className={styles.panel} aria-labelledby="story-record-heading">
           <h2 id="story-record-heading" className={ui.visuallyHidden}>Story 기록</h2>
           <div className={styles.meta}>
-            {story.tags.length > 0 && (
-              <ul className={styles.tags} aria-label="태그">
-                {story.tags.map((tag) => <li key={tag} className={styles.tag}>{tag}</li>)}
-              </ul>
-            )}
             <div className={styles.status}>
               <StatusBadge status={story.status} />
               <time dateTime={story.date.replaceAll('.', '-')}>{story.date}</time>
             </div>
           </div>
-          <dl className={`${styles.fields} ${styles.underlined}`}>
+          <dl className={styles.fields}>
             <Field label="Story 제목" text={story.title} single />
             <Field label="Why" text={story.why} />
             <Field label="문제" text={story.problem} />
@@ -106,7 +102,7 @@ export function StoryDetailPage() {
           </dl>
         </section>
 
-        <section className={styles.panel} aria-labelledby="story-summary-heading">
+        <section className={`${styles.panel} ${styles.summaryPanel}`} aria-labelledby="story-summary-heading" tabIndex={0}>
           <h2 id="story-summary-heading" className={ui.visuallyHidden}>요약과 메모</h2>
           <dl className={styles.fields}>
             <Field label="AI 요약" text={story.summary} />
@@ -121,15 +117,26 @@ export function StoryDetailPage() {
                 </dl>
               </dd>
             </div>
+            {story.tags.length > 0 && (
+              <div className={styles.field}>
+                <dt className={styles.label}>태그</dt>
+                <dd className={styles.tagGroup}>
+                  <ul className={styles.tags} aria-label="태그">
+                    {story.tags.map((tag) => <li key={tag} className={styles.tag}>{tag}</li>)}
+                  </ul>
+                </dd>
+              </div>
+            )}
+
             <Field label="메모" text={story.memo} />
           </dl>
         </section>
       </div>
 
       <div className={styles.actions}>
-        <Link to={`/stories/${story.id}/edit`} className={`${ui.secondaryButton} ${styles.button} ${styles.editButton}`}>{story.status === '초안' ? '이어서 작성' : '수정'}</Link>
-        <button type="button" className={`${ui.secondaryButton} ${styles.button} ${styles.deleteButton}`} onClick={() => setConfirmingDelete(true)}>삭제</button>
-        <button type="button" className={`${ui.primaryButton} ${styles.exportButton}`} onClick={() => downloadMarkdown(story)}>내보내기</button>
+        <Link to={`/stories/${story.id}/edit`} className={`${ui.secondaryButton} ${styles.button}`}>{story.status === '초안' ? '이어서 작성' : '수정'}</Link>
+        <button type="button" className={`${ui.dangerOutlineButton} ${styles.button}`} onClick={() => setConfirmingDelete(true)}>삭제</button>
+        <button type="button" className={`${ui.secondaryButton} ${styles.exportButton}`} onClick={() => downloadMarkdown(story)}>내보내기</button>
       </div>
 
       {confirmingDelete && (

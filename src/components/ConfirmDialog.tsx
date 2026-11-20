@@ -44,7 +44,7 @@ export function ConfirmDialog({ title, description, confirmLabel, cancelLabel = 
         <p id={`${id}-description`}>{description}</p>
         {children && <div className={styles.detail}>{children}</div>}
         <div className={styles.actions}>
-          <button ref={cancelButton} type="button" className={`${ui.secondaryButton} ${styles.cancel}`} disabled={pending} onClick={() => dialog.current?.close()}>{cancelLabel}</button>
+          <button ref={cancelButton} type="button" className={ui.ghostButton} disabled={pending} onClick={() => dialog.current?.close()}>{cancelLabel}</button>
           <button type="button" className={tone === 'danger' ? ui.dangerButton : ui.primaryButton} disabled={pending} onClick={onConfirm}>{confirmLabel}</button>
         </div>
       </div>

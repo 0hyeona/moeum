@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
-import { emptyStoryFields, type Analysis, type AnalysisMode, type Project, type Service, type StoryFields } from '../data/projects';
+import { type Analysis, type AnalysisMode, type Project, type Service, type StoryFields } from '../data/projects';
 import * as projectApi from '../api/projects';
 import { useGithubActivities } from './useGithubActivities';
 import { syncNotionActivities } from '../api/externalActivities';
@@ -14,6 +14,7 @@ import { clearAccessToken } from '../api/auth';
 import { useFigmaActivities } from './useFigmaActivities';
 import { useStoryStore } from './useStoryStore';
 import { analyzeActivities, type ServerStoryStatus } from '../api/stories';
+import { storyDraftFromAnalysis } from '../data/storyDraft';
 
 export type NewProject = { name: string; description: string; urls: Record<Service, string> };
 
@@ -232,7 +233,7 @@ function useProjectsState() {
     setAnalyzing(true);
     setAnalysisError('');
     try {
-      const result = { ...await analyzeActivities(projectId, changes, controller.signal), changeIds, projectId, mode };
+      const result = { ...await analyzeActivities(projectId, changes, controller.signal, mode), changeIds, projectId, mode };
       if (controller.signal.aborted) return null;
       setSelectedChangeIds(changeIds);
       setAnalysis(result);
@@ -256,7 +257,7 @@ function useProjectsState() {
     const selected = !fields && analysis?.projectId === activeProject.id ? analysis : null;
     const changes = selected ? activeProject.changes.filter(change => selected.changeIds.includes(change.id)) : [];
     if (selected && changes.length !== selected.changeIds.length) throw new Error('선택한 변경사항이 달라졌어요. 변경사항을 다시 선택해주세요.');
-    const values = fields ?? { ...emptyStoryFields, ...selected, tags: selected?.tags ?? [] };
+    const values = fields ?? storyDraftFromAnalysis(selected);
     const story = await storyStore.createDraft(activeProject.id, values, changes);
     setSelectedChangeIds([]);
     return story.id;

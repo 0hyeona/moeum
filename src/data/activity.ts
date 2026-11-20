@@ -30,6 +30,7 @@ export function toChange(item: ActivityItem, now = new Date()): Change {
   return {
     id: `${item.service.toLowerCase()}:${item.id}`, service: item.service,
     activityId: item.activityId,
+    occurredAt: valid ? date.toISOString() : undefined,
     title: item.title, description: item.description ?? '',
     reference: item.reference ?? item.id, status: item.status ?? '업데이트',
     labels: item.labels ?? [], before: item.before ?? '', after: item.after ?? '',

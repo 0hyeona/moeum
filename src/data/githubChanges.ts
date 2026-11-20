@@ -9,6 +9,7 @@ export function githubChanges(repository: string, commits: GitHubCommit[], now =
     return {
       id: `github:${repository.toLowerCase()}:${commit.sha}`, service: 'GitHub',
       reference: commit.sha.slice(0, 7), title: commit.message.split('\n')[0],
+      occurredAt: date && day !== null ? date.toISOString() : undefined,
       description: commit.message, meta: `커밋 ${commit.sha.slice(0, 7)} · ${date && day !== null ? date.toLocaleDateString('ko-KR') : '날짜 정보 없음'}`,
       status: commit.merged ? '머지' : '커밋', labels: [repository, commit.merged ? '머지' : '커밋'],
       daysAgo: day === null ? Infinity : Math.max(0, Math.floor((today - day) / 86400000)),

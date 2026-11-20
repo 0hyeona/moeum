@@ -3,6 +3,7 @@ import { Link, Navigate, useNavigate } from 'react-router';
 import type { Change } from '../data/projects';
 import { useProjects } from '../state/ProjectsContext';
 import { SelectedChangeCard } from '../components/SelectedChangeCard';
+import { ModeOptions } from '../components/ModeOptions';
 import { TagEditor } from '../components/TagEditor';
 import { PageHeading, useDocumentTitle } from '../components/ui';
 import form from '../components/form.module.css';
@@ -60,8 +61,8 @@ export function StoryAnalysisPage() {
 
   return (
     <div className={styles.page}>
-      <PageHeading title="Story 만들기" description="선택한 변경사항을 하나의 Story로 정리해보세요." />
-      <fieldset className={styles.layout} disabled={creating || analyzing} style={{ border: 0, margin: 0, padding: 0, minWidth: 0 }}>
+      <PageHeading title="Story 만들기" />
+      <fieldset className={styles.layout} disabled={creating || analyzing}>
         <section
           className={`${styles.panel} ${styles.selection}`}
           aria-labelledby="selected-changes-heading"
@@ -80,14 +81,18 @@ export function StoryAnalysisPage() {
               </li>
             ))}
           </ul>
+          <div className={styles.mode}>
+            <h3>분석 방식</h3>
+            <ModeOptions value={analysis.mode} />
+          </div>
           {analyzing && <p role="status">남은 변경사항을 다시 분석하고 있어요…</p>}
           {analysisError && <p role="alert">{analysisError}</p>}
         </section>
 
         <div className={styles.result}>
           <section className={styles.panel} aria-labelledby="analysis-result-heading">
-            <h2 id="analysis-result-heading">AI Story 분석 결과</h2>
-            <p className={styles.description}>AI가 생성한 초안이에요. 내용을 확인하고 자유롭게 수정해주세요.</p>
+            <h2 id="analysis-result-heading">Story 분석 결과</h2>
+            <p className={styles.description}>작업 기록과 확인 가능한 코드 변경을 정리한 초안이에요. 내용을 확인하고 수정해주세요.</p>
             <div className={styles.fields}>
               <div className={form.field} role="group" aria-labelledby="analysis-tags-label">
                 <span id="analysis-tags-label" className={form.label}>태그</span>
@@ -135,7 +140,7 @@ export function StoryAnalysisPage() {
                 </div>
               </div>
               <div className={form.field}>
-                <label htmlFor="analysis-summary" className={form.label}>AI 분석</label>
+                <label htmlFor="analysis-summary" className={form.label}>변경사항 분석</label>
                 <textarea
                   id="analysis-summary"
                   className={`${form.textarea} ${styles.summary}`}

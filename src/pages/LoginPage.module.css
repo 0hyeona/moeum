@@ -143,3 +143,5 @@
   .accountLinks button, .accountLinks a { font-size: 14px; }
   .terms { font-size: 13px; line-height: 20px; }
 }
+
+.primaryButton, .primaryLink { min-height: 42px; padding: 10px 16px; font-size: 15px; line-height: 20px; font-weight: 650; }

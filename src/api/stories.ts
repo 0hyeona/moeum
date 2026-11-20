@@ -1,6 +1,6 @@
 import { apiRequest } from './client';
 import { getAccessToken } from './auth';
-import { emptyStoryFields, type Change, type Service, type Story, type StoryFields } from '../data/projects';
+import { emptyStoryFields, type AnalysisMode, type Change, type Service, type Story, type StoryFields } from '../data/projects';
 
 export type ServerStoryStatus = 'draft' | 'published';
 type StoryResponse = {
@@ -93,9 +93,10 @@ export function activityIds(changes: Change[], required = false) {
   if (changes.some(change => !positiveId(change.activityId))) throw new Error('서버에 저장된 변경사항이 필요합니다. 변경사항을 새로고침해주세요.');
   return [...new Set(changes.map(change => change.activityId!))];
 }
-export async function analyzeActivities(projectId: string, changes: Change[], signal?: AbortSignal) {
+export async function analyzeActivities(projectId: string, changes: Change[], signal?: AbortSignal, mode: AnalysisMode = '의미 중심') {
+  const analysisMode = { '의미 중심': 'semantic', '균형': 'balanced', '코드 상세': 'code' }[mode];
   const result = await request<unknown>('/stories/analyze', { method: 'POST', signal,
-    body: JSON.stringify({ project_id: id(projectId), activity_ids: activityIds(changes, true) }) });
+    body: JSON.stringify({ project_id: id(projectId), activity_ids: activityIds(changes, true), mode: analysisMode }) });
   const value = objectValue(result);
   if (!Array.isArray(value.tags) || value.tags.some(tag => typeof tag !== 'string')
     || ['title', 'summary', 'before', 'after'].some(key => value[key] !== null && typeof value[key] !== 'string')) throw new Error('AI 분석 응답 형식을 확인해주세요.');

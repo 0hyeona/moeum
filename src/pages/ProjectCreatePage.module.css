@@ -43,9 +43,9 @@
 }
 .placeholder { color: var(--color-subtle); }
 .select option { color: var(--color-text-strong); }
-.connectButton { min-width: 50px; padding: 8px; border: 0; border-radius: var(--radius-control); background: none; color: inherit; font-size: 13px; line-height: 18px; white-space: nowrap; transition: background-color 150ms, color 150ms; }
-.connectButton:hover { background: var(--color-selected); color: var(--color-link); }
-.connected { color: var(--color-link); font-weight: 700; }
+.connectButton { composes: primaryButton from '../components/ui.module.css'; }
+.connectButton:hover { background: var(--color-primary-hover); color: #fff; }
+.connected { background: var(--color-primary); color: #fff; }
 
 @media (max-width: 700px) {
   .page { padding: 0 16px 48px; }

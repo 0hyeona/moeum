@@ -25,9 +25,8 @@ export function TimelinePage() {
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState<'all' | StoryStatus>('all');
   const [source, setSource] = useState<'all' | Service>('all');
-  if (!project) return <Navigate to="/projects" replace />;
   const keyword = query.trim().toLowerCase();
-  const filtered = project.stories.filter(story =>
+  const filtered = (project?.stories ?? []).filter(story =>
     (!period || (story.date >= period.start && story.date <= period.end)) &&
     (status === 'all' || story.status === status) && (source === 'all' || story.sources.includes(source)) &&
     (!keyword || [story.title, story.summary, story.why, ...story.tags].some(text => text.toLowerCase().includes(keyword))));
@@ -42,9 +41,10 @@ export function TimelinePage() {
     days.set(story.date, [...(days.get(story.date) ?? []), story]);
   }
   const tagCounts = new Map<string, number>();
-  for (const story of project.stories) for (const tag of story.tags) tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1);
+  for (const story of sortedStories) for (const tag of new Set(story.tags)) tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1);
   const tags = [...tagCounts].sort((a,b) => b[1]-a[1]).slice(0,6);
-  const stats = [{ label: '전체', count: project.stories.length }, ...(['완료', '초안'] as const).map(value => ({ label: value, count: project.stories.filter(story => story.status === value).length }))];
+  const stats = [{ label: '전체', count: sortedStories.length }, ...(['완료', '초안'] as const).map(value => ({ label: value, count: sortedStories.filter(story => story.status === value).length }))];
+  if (!project) return <Navigate to="/projects" replace />;
   function resetFilters() { setQuery(''); setStatus('all'); setSource('all'); setPeriod(null); }
   return <>
     <PageHeading title="타임라인" />
@@ -70,8 +70,9 @@ export function TimelinePage() {
         </section>)}
         {storyListState.status === 'ready' && !sortedStories.length && <div className={styles.empty}><p>{hasFilters ? '조건에 맞는 Story가 없어요.' : '아직 작성한 Story가 없어요.'}</p>{hasFilters ? <button type="button" className={styles.textButton} onClick={resetFilters}>검색 조건 초기화</button> : <Link className={styles.textButton} to="/changes">변경사항에서 Story 만들기</Link>}</div>}
       </section>
-      <aside className={styles.aside} aria-label="프로젝트 Story 요약">
-        <section className={styles.panel}><h2>활동 통계</h2><ul className={styles.stats}>{stats.map(stat => <li key={stat.label}>{stat.label} <strong>{stat.count}</strong>개</li>)}</ul></section>
+      <aside className={styles.aside} aria-label="Story 통계와 태그">
+
+        <section className={`${styles.panel} ${styles.statsPanel}`}><h2>활동 통계</h2><ul className={styles.stats}>{stats.map(stat => <li key={stat.label}><span className={styles.statLabel}>{stat.label}</span><span className={styles.statValue}><strong>{stat.count}</strong>개</span></li>)}</ul></section>
         <section className={styles.panel}><h2>자주 쓴 태그</h2>{tags.length ? <ul className={styles.tags}>{tags.map(([tag]) => <li key={tag}><button type="button" onClick={() => setQuery(tag)} aria-label={tag + ' 태그로 검색'}>{tag}</button></li>)}</ul> : <p className={styles.noTags}>아직 태그가 없어요.</p>}</section>
       </aside>
     </div>

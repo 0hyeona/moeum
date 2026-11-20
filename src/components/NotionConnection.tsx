@@ -32,12 +32,13 @@ export function NotionConnection() {
     }
   }
 
+  if (loading) return null;
+  if (connection?.connected) return error ? <p id="notion-account" className={form.error} role="alert">{error}</p> : null;
+
   return <div id="notion-account" style={{ marginBlock: 16 }}>
-    <p role="status">{loading ? 'Notion 연결 확인 중…' : connection?.connected
-      ? `${connection.workspace_name || 'Notion'} 계정이 연결되어 있어요. 아래에 승인한 페이지 URL을 저장해 주세요.`
-      : 'Notion 계정을 연결하고 읽을 페이지를 승인한 뒤, 아래에 페이지 URL을 저장해 주세요.'}</p>
+    <p role="status">{'Notion 계정을 연결하고 읽을 페이지를 승인한 뒤, 아래에 페이지 URL을 저장해 주세요.'}</p>
     <button type="button" className={ui.secondaryButton} disabled={loading || pending} onClick={() => void connect()}>
-      {pending ? '승인 화면으로 이동 중…' : connection?.connected ? 'Notion 페이지 권한 다시 연결' : 'Notion 계정 연결'}
+      {pending ? '승인 화면으로 이동 중…' : 'Notion 계정 연결'}
     </button>
     {error && <p className={form.error} role="alert">{error}</p>}
   </div>;

@@ -5,6 +5,7 @@ import { services, type Change, type Service } from '../data/projects';
 import { useProjects } from '../state/ProjectsContext';
 import type { FilterOption } from '../components/FilterSelect';
 import { MoodFilter } from '../components/MoodFilter';
+import { ModeOptions } from '../components/ModeOptions';
 import { DateRangeFilter, type DateRange } from '../components/DateRangeFilter';
 import { SearchField } from '../components/SearchField';
 import { SelectedChangeCard } from '../components/SelectedChangeCard';
@@ -12,10 +13,11 @@ import { Badge, PageHeading, ServiceIcon, useDocumentTitle } from '../components
 import form from '../components/form.module.css';
 import ui from '../components/ui.module.css';
 import styles from './ChangesPage.module.css';
+import { changeDescription, newestChanges, notionDetails, selectedChangePreview } from './changesPresentation';
 
 const serviceOptions: readonly FilterOption<Service | 'all'>[] = [
   { value: 'all', label: '서비스 전체' },
-  ...services.map((service) => ({ value: service, label: service })),
+  ...(['Notion', 'GitHub', 'Figma'] as const).map((service) => ({ value: service, label: service })),
 ];
 
 function isService(value: string | null): value is Service {
@@ -50,7 +52,7 @@ function matchesQuery(change: Change, query: string) {
 
 export function ChangesPage() {
   useDocumentTitle('변경사항 선택');
-  const { activeProject: project, selectedChangeIds, toggleChange, analyze, analyzing, analysisError, cancelAnalysis, activityStates, refreshActivities, figma } = useProjects();
+  const { activeProject: project, selectedChangeIds, toggleChange, mode, setMode, analyze, analyzing, analysisError, cancelAnalysis, activityStates, refreshActivities, figma } = useProjects();
   const navigate = useNavigate();
   useEffect(() => () => cancelAnalysis(), [cancelAnalysis]);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -94,7 +96,7 @@ export function ChangesPage() {
     && matchesQuery(change, normalizedQuery)
   );
   const shownChanges = project.changes.filter((change) => !hiddenIds.includes(change.id));
-  const visibleChanges = shownChanges.filter(matchesFilters);
+  const visibleChanges = newestChanges(shownChanges.filter(matchesFilters));
   const hasServiceChanges = project.changes.some(change => service === 'all' || change.service === service);
   const filteredOutCount = shownChanges.length - visibleChanges.length;
   // 오른쪽 패널은 고른 순서대로 보여줍니다.
@@ -155,9 +157,9 @@ export function ChangesPage() {
           <div className={styles.toolbar}>
             <SearchField className={styles.search} label="변경사항 검색" placeholder="변경 메시지, 서비스, 상태 검색" value={query} onChange={setQuery} />
             <div className={styles.filters}>
-              <DateRangeFilter value={period} onChange={setPeriod} />
-              <MoodFilter label="서비스" value={service} options={serviceOptions} onChange={changeService} />
               <MoodFilter label="상태" value={status} options={statusOptions} onChange={setStatus} />
+              <MoodFilter label="서비스" value={service} options={serviceOptions} onChange={changeService} />
+              <DateRangeFilter value={period} onChange={setPeriod} />
             </div>
           </div>
 
@@ -169,7 +171,7 @@ export function ChangesPage() {
 
           {visibleServices.map(item => {
             const state = activityStates[item];
-            if (state.status === 'ready' && item === 'GitHub') return null;
+            if (service !== 'all' && (state.status === 'ready' || state.status === 'pending' || state.status === 'loading')) return null;
             if (item === 'Figma' && state.status !== 'disconnected') {
               const count = project.changes.filter(change => change.service === 'Figma').length;
               return <div key={item} className={`${styles.serviceNotice} ${state.status === 'error' || figma.error ? styles.serviceError : ''}`}>
@@ -178,14 +180,14 @@ export function ChangesPage() {
                   <div className={styles.noticeTitle}><strong>Figma</strong><span role="status">
                     {figma.syncing ? '수집 중…' : state.status === 'loading' ? '저장된 변경사항 조회 중…' : state.status === 'error' ? '조회 실패' : '저장된 변경사항'}
                   </span></div>
-                  {(state.status === 'ready' || count > 0) && <p>미정리 변경사항 {count}개</p>}
+                  {service === 'all' && (state.status === 'ready' || count > 0) && <p>미정리 변경사항 {count}개</p>}
                   {state.status === 'error' && <p role="alert">{state.error}</p>}
                   {figma.notice && <p role={figma.error ? 'alert' : 'status'}>{figma.notice}</p>}
-                  {figma.hasMore && <p>새로고침하면 다음 페이지의 기록을 수집해요.</p>}
+                  {service === 'all' && figma.hasMore && <p>새로고침하면 다음 페이지의 기록을 수집해요.</p>}
                 </div>
                 <div className={styles.noticeActions}>
-                  <button type="button" className={styles.textButton} disabled={figma.refreshDisabled} onClick={figma.refresh}>새로고침</button>
-                  {state.status === 'error' && <button type="button" className={styles.textButton} disabled={figma.syncing} onClick={figma.reload}>목록 다시 조회</button>}
+                  {service === 'all' && <button type="button" className={styles.textButton} disabled={figma.refreshDisabled} onClick={figma.refresh}>새로고침</button>}
+                  {service === 'all' && state.status === 'error' && <button type="button" className={styles.textButton} disabled={figma.syncing} onClick={figma.reload}>목록 다시 조회</button>}
                 </div>
               </div>;
             }
@@ -195,7 +197,7 @@ export function ChangesPage() {
               <p>{state.status === 'loading' ? '변경사항을 수집·조회하고 있어요…' : state.status === 'pending' ? '변경사항 조회를 준비하고 있어요.' : state.status === 'disconnected' ? '서비스를 연결하면 변경사항을 모아볼 수 있어요.' : state.status === 'ready' ? `미정리 변경사항 ${project.changes.filter(change => change.service === item).length}개` : state.error}</p></div>
               {item === 'Notion' && state.status === 'error' && <Link className={styles.textButton} to="/settings#notion-account">Notion 연결 설정</Link>}
               {item !== 'Figma' && state.status === 'error' && <button type="button" className={styles.textButton} onClick={() => refreshActivities(item)}>다시 시도</button>}
-              {item === 'Notion' && (state.status === 'ready' || state.status === 'loading') && <button type="button" className={styles.textButton} disabled={state.status === 'loading'} onClick={() => refreshActivities(item)}>새로고침</button>}
+              {service === 'all' && item === 'Notion' && (state.status === 'ready' || state.status === 'loading') && <button type="button" className={styles.textButton} disabled={state.status === 'loading'} onClick={() => refreshActivities(item)}>새로고침</button>}
               {state.status === 'disconnected' && <Link className={styles.textButton} to={'/settings#settings-url-' + item}>연결하기</Link>}
             </div>;
           })}
@@ -238,7 +240,7 @@ export function ChangesPage() {
               <ul ref={selectedList} className={styles.selectedList}>
                 {selectedChanges.map((change, index) => (
                   <li key={change.id} className={styles.selectedItem}>
-                    <SelectedChangeCard change={change} onRemove={() => removeSelected(change, index)} />
+                    <SelectedChangeCard change={selectedChangePreview(change)} onRemove={() => removeSelected(change, index)} />
                   </li>
                 ))}
               </ul>
@@ -247,11 +249,18 @@ export function ChangesPage() {
             )}
           </section>
 
+          <section className={styles.panel} aria-labelledby="mode-heading">
+            <h2 id="mode-heading">분석 방식</h2>
+            <div className={styles.modes}>
+              <ModeOptions value={mode} onChange={setMode} disabled={analyzing} />
+            </div>
+          </section>
+
           <p role="status">변경사항은 최대 20개까지 선택할 수 있어요. ({selectedChanges.length}/20)</p>
           {analysisError && <p role="alert">{analysisError}</p>}
 
           <button type="button" className={`${ui.primaryButton} ${styles.analyzeButton}`} disabled={analyzing || selectedChanges.length === 0 || selectedChanges.length > 20} onClick={startAnalysis}>
-            {analyzing ? 'AI 분석 중…' : 'AI Story 분석'}
+            {analyzing ? '분석 중…' : 'Story 분석'}
           </button>
         </div>
       </div>
@@ -278,7 +287,7 @@ function FeedCard({ change, selected, disabled, onToggle, onHide }: FeedCardProp
           <ServiceIcon service={change.service} />
           <span className={styles.source}>
             <span className={styles.service}>{change.service}</span>
-            <span id={metaId} className={styles.meta}>{change.meta}</span>
+            <span id={metaId} className={styles.meta}>{change.service === 'GitHub' ? change.meta.replace(/^커밋\s+/, '') : change.meta}</span>
           </span>
           <input
             id={checkboxId(change)}
@@ -292,8 +301,15 @@ function FeedCard({ change, selected, disabled, onToggle, onHide }: FeedCardProp
           />
         </span>
         <span id={titleId} className={styles.title}>{change.title}</span>
-        <span className={styles.description}>{change.description}</span>
-        <span className={styles.status}><Badge>{change.status}</Badge></span>
+        {change.service === 'Notion' ? (
+          <span className={styles.notionDetails}>
+            {notionDetails(change).map((detail, index) => <span key={index} className={styles.diffSection}>
+              <span className={styles.diffLabel}>{detail.label}</span>
+              <span className={styles.diffContent}>{detail.content}</span>
+            </span>)}
+          </span>
+        ) : changeDescription(change) && <span className={styles.description}>{changeDescription(change)}</span>}
+        {!(change.service === 'Notion' && change.status === '업데이트') && <span className={styles.status}><Badge>{change.status}</Badge></span>}
       </label>
       <button type="button" className={styles.hide} disabled={disabled} onClick={onHide} aria-label={`${change.title} 목록에서 숨기기`}>
         <img src={closeIcon} alt="" width="24" height="24" />
