@@ -12,3 +12,9 @@
 .error { margin: 8px 12px; color: var(--color-error); font-size: 13px; line-height: 20px; }
 @keyframes appear { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
 @media (prefers-reduced-motion: reduce) { .panel { animation: none; } .avatar { transition: none; } }
+
+@media (max-width: 402px) {
+  .avatar { font-size: var(--font-mobile-label); }
+  .details strong, .logout { font-size: var(--font-mobile-label); line-height: 20px; }
+  .details span, .error { font-size: var(--font-mobile-body); line-height: 18px; }
+}

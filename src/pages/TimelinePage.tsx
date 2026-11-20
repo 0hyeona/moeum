@@ -50,17 +50,24 @@ export function TimelinePage() {
     <PageHeading title="타임라인" />
     <div className={styles.page}>
       <div className={styles.toolbar}>
-        <SearchField className={styles.search} label="Story 검색" placeholder="Story 제목, Summary, Why 또는 태그 검색" value={query} onChange={setQuery} />
+        <SearchField className={styles.search} label="Story 검색" placeholder="Story 또는 태그 검색" value={query} onChange={setQuery} />
         <div className={styles.filters}>
-          <MoodFilter label="상태" value={status} options={statusOptions} onChange={setStatus} />
-          <MoodFilter label="출처" value={source} options={sourceOptions} onChange={setSource} />
-          <DateRangeFilter value={period} onChange={setPeriod} />
-          {hasFilters && <button type="button" className={styles.textButton} onClick={resetFilters}>초기화</button>}
+          <MoodFilter label="상태" value={status} options={statusOptions} onChange={setStatus} mobileDefaultLabel="상태" />
+          <MoodFilter label="출처" value={source} options={sourceOptions} onChange={setSource} mobileDefaultLabel="출처" />
+          <DateRangeFilter value={period} onChange={setPeriod} mobileLabel="기간" />
+
         </div>
+        {hasFilters && <div className={styles.selectedFilters} aria-label="선택한 검색 조건">
+          {query && <button type="button" className={styles.conditionChip} onClick={() => setQuery('')} aria-label="검색어 해제"><span>{query}</span><span aria-hidden="true">×</span></button>}
+          {status !== 'all' && <button type="button" className={styles.conditionChip} onClick={() => setStatus('all')} aria-label={status + ' 상태 해제'}><span>{status}</span><span aria-hidden="true">×</span></button>}
+          {source !== 'all' && <button type="button" className={styles.conditionChip} onClick={() => setSource('all')} aria-label={source + ' 출처 해제'}><span>{source}</span><span aria-hidden="true">×</span></button>}
+          {period && <button type="button" className={styles.conditionChip} onClick={() => setPeriod(null)} aria-label="기간 조건 해제"><span>{period.start} ~ {period.end}</span><span aria-hidden="true">×</span></button>}
+          <button type="button" className={styles.resetFilters} onClick={resetFilters}>초기화</button>
+        </div>}
       </div>
       <section className={styles.timeline} aria-label="날짜별 Story">
         <StoryLoadNotice />
-        <p className={styles.srOnly} role="status">Story {sortedStories.length}개</p>
+        <p className={styles.resultsCount} role="status">{storyListState.status === 'ready' ? <>검색 결과 <strong>{sortedStories.length}개</strong></> : 'Story 목록을 확인하고 있어요.'}</p>
         {[...months].map(([month, days]) => <section className={styles.month} key={month} aria-label={month}>
           <h2 className={styles.monthHeading}>{Number(month.slice(0,4))}년 {Number(month.slice(5,7))}월</h2>
           {[...days].map(([date, stories]) => <div className={styles.day} key={date}>

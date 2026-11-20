@@ -21,3 +21,22 @@
 .actions button { padding: 0 16px; }
 .actions button:first-child { margin-right: auto; color: var(--color-muted); }
 .content button:disabled { opacity: .4; cursor: not-allowed; }
+.mobileLabel { display: none; }
+@media (max-width: 700px) {
+  .mobileLabel { display: inline; }
+  .desktopLabel { display: none; }
+}
+
+@media (max-width: 402px) {
+  .dialog { width: calc(100vw - 24px); border-radius: 12px; }
+  .content { padding: 12px; }
+  .header h2 { font-size: var(--font-mobile-title); line-height: 24px; }
+  .content button { font-size: var(--font-mobile-body); }
+  .header button, .month button { font-size: var(--font-mobile-title); }
+  .hint { margin: 6px 0 16px; font-size: var(--font-mobile-body); line-height: 18px; }
+  .range, .weekday { font-size: var(--font-mobile-body); line-height: 18px; }
+  .range strong, .month strong { font-size: var(--font-mobile-label); line-height: 20px; }
+  .range strong { margin-top: 4px; }
+  .actions { gap: 4px; margin-top: 16px; padding-top: 12px; }
+  .actions button { padding-inline: 10px; }
+}

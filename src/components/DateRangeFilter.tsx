@@ -8,7 +8,7 @@ function key(date: Date) {
   return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`;
 }
 
-export function DateRangeFilter({ value, onChange }: { value: DateRange | null; onChange: (value: DateRange | null) => void }) {
+export function DateRangeFilter({ value, onChange, mobileLabel }: { value: DateRange | null; onChange: (value: DateRange | null) => void; mobileLabel?: string }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const id = useId();
@@ -35,7 +35,7 @@ export function DateRangeFilter({ value, onChange }: { value: DateRange | null; 
       setDraft(value);
       setMonth(value ? new Date(Number(value.start.slice(0, 4)), Number(value.start.slice(5, 7)) - 1, 1) : new Date());
       setOpen(true);
-    }}>{value ? `${value.start} – ${value.end}` : '전체 기간'}</button>
+    }}><span className={mobileLabel ? styles.desktopLabel : undefined}>{value ? `${value.start} – ${value.end}` : '전체 기간'}</span>{mobileLabel && <span className={styles.mobileLabel}>{mobileLabel}</span>}</button>
     {open && <dialog ref={dialog} className={styles.dialog} aria-labelledby={id} onCancel={event => { event.preventDefault(); close(); }} onClick={event => { if (event.target === event.currentTarget) close(); }}>
       <div className={styles.content}>
         <header className={styles.header}><h2 id={id}>기간 선택</h2><button type="button" aria-label="닫기" onClick={close}>×</button></header>

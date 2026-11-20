@@ -22,3 +22,8 @@
   .button, .tooltip { transition: none; }
   .button:hover, .button:focus-visible, .button:active, .tooltip { transform: none; }
 }
+
+@media (max-width: 402px) {
+  .guide { right: 12px; bottom: 12px; }
+  .button { width: 44px; height: 44px; padding: 6px; }
+}

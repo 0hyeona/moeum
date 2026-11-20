@@ -3,3 +3,7 @@
 .option { cursor: pointer; }
 .readOnly { margin: 0; }
 .mark { flex: none; width: 16px; height: 16px; border: 1px solid var(--color-primary); border-radius: 50%; background: radial-gradient(circle closest-side, var(--color-primary) 81%, var(--color-selected) 86%); }
+@media (max-width: 402px) {
+  .options { gap: 4px 12px; }
+  .option, .readOnly { min-height: 44px; gap: 6px; font-size: 12px; line-height: 18px; }
+}

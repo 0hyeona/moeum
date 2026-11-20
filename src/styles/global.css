@@ -53,6 +53,10 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
   outline-offset: 3px;
 }
 button { touch-action: manipulation; }
+@media (max-width: 402px) {
+  :root { font-size: 12px; --font-mobile-body: 12px; --font-mobile-label: 14px; --font-mobile-title: 16px; }
+  body { line-height: 1.5; }
+}
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; }
 }

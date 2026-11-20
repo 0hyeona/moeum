@@ -16,9 +16,19 @@
   cursor: pointer;
   transition: border-color 150ms;
 }
+
+
 .select:hover { border-color: var(--color-subtle); }
 .select option { color: var(--color-text-strong); font-weight: 400; }
 
 @media (max-width: 700px) {
   .select { height: 48px; }
+}
+
+@media (max-width: 402px) {
+  .select { min-width: 0; height: 44px; padding: 0 27px 0 8px; background-position: right 7px center; background-size: 16px; font-size: var(--font-mobile-body); line-height: 18px; overflow: hidden; white-space: nowrap; }
+}
+
+@media (max-width: 700px) {
+  .select { height: 44px; padding: 0 28px 0 10px; background-position: right 8px center; background-size: 16px; font-size: 14px; line-height: 20px; }
 }

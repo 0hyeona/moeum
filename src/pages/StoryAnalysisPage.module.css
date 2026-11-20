@@ -1,14 +1,16 @@
 .page { padding: 0 0 116px; }
 /* 1920px 기준 좌측 690px, 우측 1013px 비율을 유지합니다. */
-.layout { border: 0; margin: 0; min-width: 0; padding: 0 48px; display: grid; grid-template-columns: minmax(0, 690fr) minmax(0, 1013fr); gap: 52px; align-items: start; }
+.layout { border: 0; margin: 0; min-width: 0; padding: 0 48px; display: grid; grid-template-columns: minmax(0, 690fr) minmax(0, 1013fr); grid-template-areas: 'selection result' 'selection action'; gap: 32px 52px; align-items: start; }
 
 .panel { min-width: 0; padding: 32px; border-radius: var(--radius-control); background: var(--color-surface); }
 .panel h2 { margin: 0; font-size: 25px; line-height: 30px; font-weight: 700; }
 .panel h2:focus { outline: none; }
 
 /* 선택된 변경사항 */
-.selection { position: sticky; top: 24px; max-height: calc(100dvh - 48px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; display: flex; flex-direction: column; gap: 32px; }
+.selection { grid-area: selection; position: sticky; top: 24px; max-height: calc(100dvh - 48px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; display: flex; flex-direction: column; gap: 32px; }
 .selection > * { flex-shrink: 0; }
+.selectionToggle { display: none; }
+.selectionDetails { display: flex; min-width: 0; flex-direction: column; gap: 32px; }
 .selectionHeader { display: flex; align-items: center; gap: 32px; }
 .selectionHeader h2 { flex: 1; min-width: 0; }
 .count { flex: none; margin: 0; display: flex; align-items: center; gap: 4px; font-size: 13px; line-height: 24px; white-space: nowrap; }
@@ -20,35 +22,78 @@
 .mode h3 { margin: 0; font-size: 25px; line-height: 30px; font-weight: 700; }
 
 /* AI Story 분석 결과 */
-.result { min-width: 0; display: flex; flex-direction: column; gap: 45px; }
-.description { margin: 13px 0 0; font-size: 20px; line-height: 24px; word-break: keep-all; }
-.fields { --field-gap: 16px; display: flex; flex-direction: column; gap: 32px; margin-top: 32px; }
+.result { grid-area: result; min-width: 0; display: flex; flex-direction: column; gap: 45px; }
+.description { margin: 8px 0 0; color: var(--color-muted); font-size: 16px; line-height: 24px; word-break: keep-all; }
+.fields { --field-gap: 8px; display: flex; flex-direction: column; gap: 16px; margin-top: 20px; }
+.fields > div + div { padding-top: 16px; border-top: 1px solid var(--color-border); }
+.fields > div > label, .fields > div > span { font-size: 18px; line-height: 26px; font-weight: 600; }
+.fields textarea { min-height: 112px; padding: 14px 16px; background: var(--color-background); font-size: 16px; font-weight: 400; line-height: 1.8; }
+.fields textarea:focus { background: var(--color-surface); }
+.fields .titleInput { min-height: 44px; padding: 8px 12px; background: var(--color-background); font-size: 16px; line-height: 1.8; font-weight: 400; }
+.fields .summary { min-height: 112px; }
 .beforeAfter { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
-.comparison { min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+.comparison { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
 .comparison textarea { flex: 1 1 auto; }
-.before, .after { font-size: 16px; line-height: 22px; }
-.before { color: #ff383c; }
-.after { color: #34c759; }
+.before, .after { font-size: 14px; line-height: 20px; font-weight: 600; }
+.before { color: #c13838; }
+.after { color: #168443; }
 .summary { padding: 16px; }
-.startButton { align-self: flex-end; }
+.titleInput { min-height: 58px; }
+.startButton { grid-area: action; justify-self: end; }
 
 @media (max-width: 1439px) {
   .page { padding-bottom: 88px; }
-  .layout { padding: 0 48px; grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  .layout { padding: 0 48px; grid-template-columns: minmax(0, 1fr); grid-template-areas: 'selection' 'result' 'action'; gap: 24px; }
   .selection { position: static; max-height: none; overflow-y: visible; }
   .result { gap: 32px; }
 }
 @media (max-width: 700px) {
   .page { padding-bottom: 48px; }
-  .layout { padding: 0 16px; gap: 16px; }
+  .layout { padding: 0 16px; grid-template-areas: 'selection' 'result' 'action'; gap: 16px; }
   .panel { padding: 20px 16px; }
   .panel h2, .mode h3 { font-size: 20px; line-height: 26px; }
   .selection, .result { gap: 20px; }
   .selectionHeader { flex-wrap: wrap; gap: 8px 16px; }
   .mode { gap: 16px; padding: 20px 16px; }
   .description { margin-top: 8px; font-size: 16px; line-height: 22px; }
-  .fields { --field-gap: 12px; gap: 24px; margin-top: 24px; }
+  .fields { --field-gap: 8px; gap: 12px; margin-top: 16px; }
+  .fields > div + div { padding-top: 12px; }
   .beforeAfter { grid-template-columns: minmax(0, 1fr); gap: 16px; }
   .comparison { gap: 8px; }
-  .startButton { align-self: stretch; }
+  .startButton { justify-self: stretch; }
+  .selectionToggle { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-height: 44px; padding: 0; border: 0; background: transparent; color: inherit; font-size: 16px; line-height: 24px; text-align: left; font-weight: 600; }
+  .selectionToggle strong { margin-left: 4px; color: var(--color-link); }
+  .selectionToggle svg { flex: none; }
+  .selectionToggle[aria-expanded='true'] svg { transform: rotate(180deg); }
+  .selectionDetails { gap: 12px; }
+  .selectionDetails[data-open='false'] { display: none; }
+  .selectionDetails .selectionHeader { display: flex; justify-content: flex-end; }
+  .selectionHeader h2, .selectionHeader .count { display: none; }
+}
+
+@media (max-width: 402px) {
+  .page { padding-bottom: 76px; }
+  .layout { padding-inline: 12px; gap: 12px; }
+  .panel { padding: 12px; }
+  .panel h2, .mode h3 { font-size: 14px; line-height: 20px; }
+  .description { margin-top: 6px; color: var(--color-muted); font-size: 12px; line-height: 18px; }
+  .selection, .result { gap: 12px; }
+  .selectionHeader { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 8px; }
+  .selectionHeader h2 { grid-column: 1; }
+  .count { grid-column: 1; grid-row: 2; font-size: 12px; line-height: 18px; }
+  .count strong { font-size: 16px; line-height: 24px; }
+  .resetButton { grid-column: 2; grid-row: 1 / 3; min-height: 44px; padding: 8px 10px; font-size: 12px; }
+  .changes { gap: 8px; }
+  .mode { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; }
+  .fields { --field-gap: 6px; margin-top: 12px; gap: 12px; }
+  .fields > div + div { padding-top: 8px; }
+  .fields > div > label, .fields > div > span { font-size: 14px; line-height: 20px; }
+  .fields textarea { padding: 10px 12px; font-size: 12px; line-height: 18px; overflow-wrap: anywhere; white-space: pre-wrap; }
+  .fields .titleInput { min-height: 44px; padding: 8px 10px; font-size: 12px; line-height: 18px; }
+  .beforeAfter { gap: 12px; }
+  .comparison { gap: 6px; }
+  .before, .after { font-size: 12px; line-height: 18px; }
+  .selection > p, .result > p { margin: 0; font-size: 12px; line-height: 18px; }
+  .startButton { min-height: 44px; font-size: 14px; }
+  .selectionToggle { font-size: 14px; line-height: 20px; }
 }

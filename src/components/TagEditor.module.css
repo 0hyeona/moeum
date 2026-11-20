@@ -9,3 +9,12 @@
 .add:hover { border-color: var(--color-primary); color: var(--color-link); }
 .input { width: 132px; padding: 0 8px; border: 1px solid var(--color-primary); background: var(--color-surface); color: inherit; }
 .input::placeholder { color: var(--color-placeholder); opacity: 1; }
+@media (max-width: 402px) {
+  .list { gap: 6px; }
+  .list > li { min-width: 0; max-width: 100%; }
+  .tag, .add, .input { min-height: 44px; height: auto; font-size: 12px; line-height: 18px; }
+  .tag { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+  .tag button { align-items: center; justify-content: center; min-width: 28px; min-height: 44px; }
+  .tag img, .add img { width: 16px; height: 16px; }
+  .input { width: min(160px, 100%); padding-block: 10px; }
+}

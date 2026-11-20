@@ -145,3 +145,41 @@
 }
 
 .primaryButton, .primaryLink { min-height: 42px; padding: 10px 16px; font-size: 15px; line-height: 20px; font-weight: 650; }
+
+@media (max-width: 402px) {
+  .page { padding: 24px 12px; }
+  .content { gap: 20px; }
+  .brand { height: 58px; }
+  .brand img { width: 116px; height: 58px; }
+  .loginArea { gap: 16px; }
+  .card { padding: 16px; gap: 16px; border-radius: 12px; box-shadow: 0 3px 10px rgb(27 34 69 / 12%); }
+  .intro { gap: 8px; }
+  .intro h1, .signupHeader h1, .stepIntro h2, .dialog h2 { font-size: 16px; line-height: 24px; }
+  .intro p, .stepIntro p { font-size: 12px; line-height: 18px; }
+  .actions { gap: 16px; }
+  .localLogin { gap: 8px; }
+  .form, .fieldset { gap: 12px; }
+  .field { gap: 4px; }
+  .field label, .field p, .hint, .error, .terms, .enterHint, .stepCount, .result p, .helpDescription, .deliveryNotice, .pendingNotice, .signupError { font-size: 12px; line-height: 18px; }
+  .field input { height: 44px; padding: 10px 12px; font-size: 14px; line-height: 20px; }
+  .field .passwordInput { padding-right: 48px; }
+  .passwordToggle { top: 0; right: 2px; }
+  .passwordToggle svg { width: 18px; height: 18px; }
+  .primaryButton, .primaryLink, .githubButton { min-height: 44px; padding: 10px 12px; font-size: 14px; line-height: 20px; }
+  .accountLinks { gap: 16px; }
+  .accountLinks button, .accountLinks a { display: inline-flex; align-items: center; min-height: 44px; font-size: 12px; line-height: 18px; }
+  .githubButton { gap: 8px; }
+  .githubIcon { width: 18px; height: 18px; mask-size: 18px 18px; }
+  .githubIcon img { width: 18px; height: auto; }
+  .terms { padding-inline: 4px; }
+  .signupCard { gap: 16px; }
+  .signupHeader { gap: 8px; }
+  .stepPanel { min-height: 160px; gap: 16px; }
+  .stepIntro { gap: 6px; }
+  .deliveryHelp { padding-top: 12px; }
+  .deliveryActions { flex-wrap: wrap; gap: 6px; }
+  .accountFooter { gap: 12px; padding-top: 12px; }
+  .accountFooter a, .accountFooter button { min-height: 44px; display: inline-flex; align-items: center; font-size: 12px; line-height: 18px; }
+  .dialog { width: calc(100% - 24px); padding: 16px; border-radius: 12px; }
+  .dialog p { margin: 12px 0 16px; font-size: 12px; line-height: 18px; }
+}

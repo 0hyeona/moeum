@@ -155,12 +155,20 @@ export function ChangesPage() {
       <div className={styles.layout}>
         <section className={styles.changes} aria-label="변경사항 목록">
           <div className={styles.toolbar}>
-            <SearchField className={styles.search} label="변경사항 검색" placeholder="변경 메시지, 서비스, 상태 검색" value={query} onChange={setQuery} />
+            <SearchField className={styles.search} label="변경사항 검색" placeholder="변경사항 또는 서비스 검색" value={query} onChange={setQuery} />
             <div className={styles.filters}>
-              <MoodFilter label="상태" value={status} options={statusOptions} onChange={setStatus} />
-              <MoodFilter label="서비스" value={service} options={serviceOptions} onChange={changeService} />
-              <DateRangeFilter value={period} onChange={setPeriod} />
+              <MoodFilter label="상태" value={status} options={statusOptions} onChange={setStatus} mobileDefaultLabel="상태" />
+              <MoodFilter label="서비스" value={service} options={serviceOptions} onChange={changeService} mobileDefaultLabel="출처" />
+              <DateRangeFilter value={period} onChange={setPeriod} mobileLabel="기간" />
             </div>
+            {(query || status !== 'all' || service !== 'all' || period) && <div className={styles.selectedFilters} aria-label="선택한 검색 조건">
+              {query && <button type="button" className={styles.conditionChip} onClick={() => setQuery('')} aria-label="검색어 해제"><span>{query}</span><span aria-hidden="true">×</span></button>}
+              {status !== 'all' && <button type="button" className={styles.conditionChip} onClick={() => setStatus('all')} aria-label={status + ' 상태 해제'}><span>{statusOptions.find(option => option.value === status)?.label}</span><span aria-hidden="true">×</span></button>}
+              {service !== 'all' && <button type="button" className={styles.conditionChip} onClick={() => changeService('all')} aria-label={service + ' 출처 해제'}><span>{service}</span><span aria-hidden="true">×</span></button>}
+              {period && <button type="button" className={styles.conditionChip} onClick={() => setPeriod(null)} aria-label="기간 조건 해제"><span>{period.start} ~ {period.end}</span><span aria-hidden="true">×</span></button>}
+              <button type="button" className={styles.resetFilters} onClick={resetFilters}>초기화</button>
+            </div>}
+            <p className={styles.resultsCount} role="status">검색 결과 <strong>{visibleChanges.length}개</strong> · 선택 {selectedChanges.length}/20</p>
           </div>
 
           {hiddenChanges.length > 0 && (
@@ -245,7 +253,7 @@ export function ChangesPage() {
                 ))}
               </ul>
             ) : (
-              <p className={styles.empty}>왼쪽에서 Story로 정리할 변경사항을 선택해주세요.</p>
+              <p className={styles.empty}>목록에서 Story로 정리할 변경사항을 선택해주세요.</p>
             )}
           </section>
 
@@ -256,7 +264,6 @@ export function ChangesPage() {
             </div>
           </section>
 
-          <p role="status">변경사항은 최대 20개까지 선택할 수 있어요. ({selectedChanges.length}/20)</p>
           {analysisError && <p role="alert">{analysisError}</p>}
 
           <button type="button" className={`${ui.primaryButton} ${styles.analyzeButton}`} disabled={analyzing || selectedChanges.length === 0 || selectedChanges.length > 20} onClick={startAnalysis}>
@@ -292,7 +299,7 @@ function FeedCard({ change, selected, disabled, onToggle, onHide }: FeedCardProp
           <input
             id={checkboxId(change)}
             type="checkbox"
-            className={`${form.radio} ${styles.check}`}
+            className={`${form.checkbox} ${styles.check}`}
             disabled={disabled}
             checked={selected}
             onChange={onToggle}

@@ -70,15 +70,31 @@
   .panelHeader { flex-wrap: wrap; gap: 8px 16px; }
   .panelHeader a { font-size: 14px; }
   .stats { grid-template-columns: minmax(0, 1fr); gap: 8px; margin-top: 20px; }
-  .stat { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(74px, auto); align-items: center; gap: 6px 10px; padding: 10px; }
-  .count, .statStatus { min-height: 32px; }
+  .stat { display: grid; grid-template-columns: minmax(0, 96px) 48px 88px; align-items: center; justify-content: space-between; gap: 6px 10px; padding: 10px; }
+  .statService { grid-column: 1; grid-row: 1; }
+  .count, .statStatus { grid-column: 2; grid-row: 1; justify-content: flex-end; min-height: 32px; }
   .count strong { font-size: 26px; line-height: 32px; }
-  .statActions { justify-content: flex-end; }
+  .statActions { grid-column: 3; grid-row: 1; justify-content: flex-end; }
+  .statActions .statButton { width: 100%; padding-inline: 8px; }
   .statNotes { grid-column: 1 / -1; padding: 7px 0 0; border-top: 1px solid var(--color-border); }
   .retryNote time { display: inline; }
   .pendingFooter .storyButton { width: 100%; }
   .stories { margin-top: 20px; }
   .branches, .tableScroll { margin-top: 24px; }
+  .commits .branches { gap: 6px; padding-bottom: 12px; }
+  .githubActions { gap: 8px; }
+  .tableScroll { overflow: visible; margin-top: 16px; }
+  .table { display: block; min-width: 0; font-size: 12px; line-height: 18px; }
+  .table colgroup { display: none; }
+  .table thead { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .table tbody { display: block; }
+  .table tbody tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; padding-block: 12px; }
+  .table tbody tr + tr { border-top: 1px solid var(--color-border); }
+  .table td, .table tbody tr + tr td { min-width: 0; padding: 0; overflow: visible; white-space: normal; overflow-wrap: anywhere; }
+  .table td:nth-child(1) { grid-column: 1; grid-row: 1; }
+  .table td:nth-child(2) { grid-column: 1 / -1; grid-row: 2; font-size: 14px; line-height: 20px; }
+  .table td:nth-child(3) { grid-column: 2; grid-row: 1; color: var(--color-muted); }
+  .table td:nth-child(4) { grid-column: 1 / -1; grid-row: 3; color: var(--color-muted); }
 }
 
 .githubEmpty { margin-top: 32px; min-height: 178px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 24px 16px; text-align: center; color: var(--color-muted); }
@@ -91,3 +107,33 @@
 .refreshButton { border: 0; padding: 0; background: none; color: var(--color-muted); font-size: 14px; }
 .refreshButton:disabled { cursor: wait; opacity: .6; }
 .githubNote { color: var(--color-muted); font-size: 13px; line-height: 20px; margin: 16px 0 0; }
+
+@media (max-width: 402px) {
+  .page { padding: 12px 12px 64px; gap: 12px; }
+  .topRow { gap: 12px; }
+  .panel { padding: 12px; }
+  .panel h2, .githubEmpty strong { font-size: var(--font-mobile-label); line-height: 20px; }
+  .panelHeader { gap: 8px; }
+  .panelHeader > div { min-width: 0; }
+  .panelHeader a, .pendingHeader p, .empty, .githubEmpty p, .githubActions, .githubNote, .statNotes, .branch, .refreshButton { font-size: var(--font-mobile-body); line-height: 18px; }
+  .pendingHeader p { margin-top: 6px; }
+  .stats { margin-top: 12px; gap: 6px; }
+  .stat { grid-template-columns: minmax(0, 80px) 36px 76px; gap: 6px 8px; padding: 8px; border-radius: 8px; }
+  .statService { gap: 6px; font-size: var(--font-mobile-label); line-height: 20px; }
+  .statIcon { width: 24px; height: 24px; border-radius: 6px; }
+  .statIcon img { max-width: 16px; max-height: 16px; width: auto; height: auto; }
+  .count, .statStatus { min-height: 24px; font-size: var(--font-mobile-body); line-height: 18px; }
+  .count strong { font-size: var(--font-mobile-title); line-height: 24px; }
+  .statActions { min-height: 0; }
+  .statActions:empty { display: none; }
+  .statActions .statButton { padding: 8px; font-size: var(--font-mobile-body); }
+  .pendingFooter { margin-top: 12px; padding-top: 12px; }
+  .pendingFooter .storyButton { min-height: 44px; font-size: var(--font-mobile-label); }
+  .storyButton img { width: 16px; height: 16px; }
+  .stories { margin-top: 12px; gap: 8px; }
+  .storyCard { min-height: 0; }
+  .commits .branches { gap: 6px; padding-bottom: 12px; }
+  .branch { padding: 3px 6px; }
+  .githubActions { gap: 8px; justify-content: flex-start; }
+  .table { font-size: var(--font-mobile-body); line-height: 18px; }
+}

@@ -10,6 +10,8 @@
   background: var(--color-surface);
   transition: border-color 150ms;
 }
+
+
 .search:hover { border-color: var(--color-subtle); }
 .search:focus-within { border-color: var(--color-primary); outline: 3px solid var(--color-primary-hover); outline-offset: 3px; }
 .search img { display: block; flex: none; }
@@ -19,4 +21,16 @@
 
 @media (max-width: 700px) {
   .search { height: 48px; padding: 0 16px; }
+}
+
+@media (max-width: 402px) {
+  .search { height: 44px; gap: 8px; padding-inline: 12px; }
+  .search img { width: 18px; height: 18px; }
+  .search input { font-size: var(--font-mobile-body); line-height: 18px; }
+}
+
+@media (max-width: 700px) {
+  .search { height: 44px; gap: 8px; padding-inline: 12px; }
+  .search img { width: 18px; height: 18px; }
+  .search input { font-size: 14px; line-height: 20px; }
 }

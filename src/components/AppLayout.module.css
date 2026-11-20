@@ -49,3 +49,17 @@
   .menu { top: 64px; left: 16px; z-index: 1; width: min(260px, calc(100vw - 32px)); }
   .navigation { order: 1; flex-basis: 100%; justify-content: space-around; gap: 16px; font-size: 16px; }
 }
+
+@media (max-width: 402px) {
+  .header { min-height: 60px; padding-inline: 12px; gap: 0 8px; }
+  .centered { min-height: 72px; }
+  .logo, .header:not(.centered) .logo { width: 66px; height: 60px; margin-right: 0; }
+  .logo img { width: 66px; height: 22px; }
+  .projectMenu { flex: 1; min-width: 0; }
+  .projectButton { width: 100%; max-width: none; gap: 4px; min-height: 44px; font-size: var(--font-mobile-label); line-height: 20px; }
+  .projectButton img { width: 20px; height: 20px; }
+  .menu { top: 56px; left: 12px; padding: 6px; width: min(240px, calc(100vw - 24px)); }
+  .menu button, .menuLink { padding: 10px; font-size: var(--font-mobile-body); line-height: 18px; }
+  .navigation { gap: 8px; font-size: var(--font-mobile-label); line-height: 20px; }
+  .navigation a { display: grid; min-height: 44px; align-items: center; }
+}

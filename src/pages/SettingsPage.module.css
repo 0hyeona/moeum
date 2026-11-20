@@ -72,3 +72,34 @@
 .serviceInfo { flex: 1; min-width: 0; }
 .serviceInfo input { margin-top: 0; }
 .fields.fieldset { margin-top: 24px; gap: 24px; }
+
+@media (max-width: 402px) {
+  .page { padding: 0 12px 64px; }
+  .sections { gap: 12px; }
+  .panel { padding: 12px; border-radius: 8px; }
+  .sectionHeader h2 { font-size: 14px; line-height: 20px; }
+  .sectionHeader p { margin-top: 6px; font-size: 12px; line-height: 18px; }
+  .fields, .fields.fieldset { margin-top: 16px; gap: 16px; }
+  .fields label, .servicesLabel h3 { font-size: 14px; line-height: 20px; }
+  .fields > div + div { padding-top: 16px; }
+  .page input { min-width: 0; height: 44px; padding-inline: 10px; font-size: 14px; line-height: 20px; }
+  .status { font-size: 12px; line-height: 18px; }
+  .servicesLabel { margin-top: 16px; }
+  .services { margin-top: 12px; gap: 8px; }
+  .service { min-height: 0; padding: 10px; gap: 10px; border-radius: 8px; }
+  .serviceInfo { gap: 10px; }
+  .serviceHeading { gap: 6px 8px; }
+  .serviceName { gap: 6px; font-size: 14px; line-height: 20px; }
+  .serviceName img { max-width: 18px; max-height: 18px; width: auto; height: auto; }
+  .connectionBadge { padding: 2px 6px; font-size: 12px; line-height: 18px; }
+  .serviceStatus { font-size: 12px; line-height: 18px; }
+  .serviceActions { gap: 6px; }
+  .serviceActions > button { min-height: 44px; font-size: 14px; padding: 8px 10px; }
+  .danger { margin-top: 12px; padding-top: 12px; gap: 12px; }
+  .alert { padding: 12px; }
+  .alertTitle { gap: 6px; font-size: 14px; line-height: 20px; }
+  .alertTitle img { width: 18px; height: 18px; }
+  .alert .alertText { margin-top: 6px; font-size: 12px; line-height: 18px; }
+  .deleteButton { min-height: 44px; }
+  .page :global(#notion-account) p { margin-block: 8px; font-size: 12px; line-height: 18px; }
+}

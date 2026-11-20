@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import type { FilterOption } from './FilterSelect';
 import styles from './MoodFilter.module.css';
 
-export function MoodFilter<T extends string>({ label, value, options, onChange }: {
-  label: string; value: T; options: readonly FilterOption<T>[]; onChange: (value: T) => void;
+export function MoodFilter<T extends string>({ label, value, options, onChange, mobileDefaultLabel }: {
+  label: string; value: T; options: readonly FilterOption<T>[]; onChange: (value: T) => void; mobileDefaultLabel?: string;
 }) {
   const root = useRef<HTMLDetailsElement>(null);
   const trigger = useRef<HTMLElement>(null);
@@ -18,7 +18,9 @@ export function MoodFilter<T extends string>({ label, value, options, onChange }
     if (event.key === 'Escape') { event.preventDefault(); if (root.current) root.current.open = false; trigger.current?.focus(); }
   }}>
     <summary ref={trigger} className={`${styles.trigger} ${value !== 'all' ? styles.active : ''}`} aria-label={`${label}: ${options.find(item => item.value === value)?.label}`}>
-      {options.find(item => item.value === value)?.label}<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+      <span className={mobileDefaultLabel && value === 'all' ? styles.desktopLabel : undefined}>{options.find(item => item.value === value)?.label}</span>
+      {mobileDefaultLabel && value === 'all' && <span className={styles.mobileLabel}>{mobileDefaultLabel}</span>}
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
     </summary>
     <div className={styles.menu} aria-label={label}>
       {options.map(option => <button key={option.value} type="button" aria-pressed={value === option.value} onClick={() => {
