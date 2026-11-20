@@ -57,3 +57,28 @@ test('settings reads connections and sends null to disconnect a single service',
     ['/backend/api/projects/7/connections/notion', 'PATCH', { external_url: null }],
   ]);
 });
+
+test('published Story is read back with its server ID after a fresh timeline request', async t => {
+  const { createStoredStory } = await import(timeline);
+  let stored;
+  t.mock.method(globalThis, 'fetch', async (url, options) => {
+    if (url === '/backend/stories' && options.method === 'POST') {
+      const input = JSON.parse(options.body);
+      assert.equal(input.project_id, 7);
+      assert.deepEqual(input.activity_ids, [14]);
+      stored = { ...input, id: 91, created_at: '2026-11-20T10:00:00' };
+      return Response.json(stored, { status: 201 });
+    }
+    if (url.startsWith('/backend/api/projects/7/stories?')) return Response.json([stored]);
+    assert.ok(url.startsWith('/backend/api/projects/7/activities?'));
+    return Response.json([{ source: 'notion', story_id: 91 }]);
+  });
+  const fields = { title: '회의 기록', memo: '내용', tags: ['회의'], summary: '요약' };
+  const saved = await createStoredStory('7', fields, ['github:team/repo:abc', 'notion:14']);
+  const [reloaded] = await loadTimeline('7', new AbortController().signal);
+  assert.equal(saved.id, '91');
+  assert.equal(reloaded.id, saved.id);
+  assert.equal(reloaded.memo, fields.memo);
+  assert.deepEqual(reloaded.tags, fields.tags);
+  assert.deepEqual(new Set(reloaded.sources), new Set(['Notion', 'GitHub']));
+});

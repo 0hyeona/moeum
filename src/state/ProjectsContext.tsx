@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
-import { createAnalysis, todayLabel, type Analysis, type AnalysisMode, type Project, type Service, type Story, type StoryFields } from '../data/projects';
+import { createAnalysis, type Analysis, type AnalysisMode, type Project, type Service, type StoryFields } from '../data/projects';
 import * as projectApi from '../api/projects';
 import { useGithubActivities } from './useGithubActivities';
 import { syncNotionActivities } from '../api/externalActivities';
@@ -8,7 +8,7 @@ import { replaceServiceChanges, type ActivityState } from '../data/activity';
 import { SessionSkeleton } from '../components/Skeleton';
 import boundaryStyles from '../components/AuthBoundary.module.css';
 import { useAuth } from './AuthContext';
-import { loadTimeline, updateStoredStory } from '../api/timeline';
+import { createStoredStory, loadTimeline, updateStoredStory } from '../api/timeline';
 import { Navigate, useLocation } from 'react-router';
 import { ApiError } from '../api/client';
 import { clearAccessToken } from '../api/auth';
@@ -68,8 +68,11 @@ function useProjectsState() {
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [storyDrafts, setStoryDrafts] = useState<Record<string, Record<string, Partial<StoryFields>>>>({});
   const activeProject = projects.find((project) => project.id === activeProjectId);
-  const { pathname } = useLocation();
-  const timelineProject = pathname === '/timeline' || /^\/stories\/\d+(?:\/edit)?\/?$/.test(pathname) ? activeProjectId : null;
+  const { pathname } = useLocation();const timelineProject =
+  ['/dashboard', '/timeline'].includes(pathname.replace(/\/$/, '')) ||
+  /^\/stories\/\d+(?:\/edit)?\/?$/.test(pathname)
+    ? activeProjectId
+    : null;
   const [timelineAttempt, setTimelineAttempt] = useState(0);
   const [timelineResult, setTimelineResult] = useState<{ id: string; error?: string } | null>(null);
   useEffect(() => {
@@ -247,13 +250,14 @@ function useProjectsState() {
   async function saveStory(fields: StoryFields, id?: string) {
     const existing = activeProject?.stories.find((story) => story.id === id);
     if (existing && /^\d+$/.test(existing.id)) await updateStoredStory(existing, fields);
-    clearStoryDraft(id);
     if (existing) {
+      clearStoryDraft(id);
       updateActive((project) => ({ ...project, stories: project.stories.map((story) => story.id === existing.id ? { ...story, ...fields, status: '완료' } : story) }));
       return existing.id;
     }
-    const sources = [...new Set(activeProject?.changes.filter((change) => analysis?.changeIds.includes(change.id)).map((change) => change.service))];
-    const story: Story = { ...fields, sourceChangeIds: analysis?.changeIds ?? [], id: crypto.randomUUID(), status: '완료', sources, date: todayLabel() };
+    if (!activeProject) throw new Error('프로젝트를 선택해주세요.');
+    const story = await createStoredStory(activeProject.id, fields, analysis?.changeIds ?? []);
+    clearStoryDraft(id);
     updateActive((project) => ({
       ...project,
       stories: [story, ...project.stories],

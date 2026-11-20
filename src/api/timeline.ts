@@ -30,26 +30,54 @@ export async function loadTimeline(id: string, signal: AbortSignal): Promise<Sto
     linked.add(service);
     sources.set(activity.story_id, linked);
   }
-  return rows.map(row => {
-    const ai = row.ai_analysis && typeof row.ai_analysis === 'object' && !Array.isArray(row.ai_analysis)
-      ? row.ai_analysis as Record<string, unknown> : {};
-    return {
-      id: String(row.id), title: row.title, date: row.created_at.slice(0, 10).replaceAll('-', '.'),
-      status: row.story_status === 'published' ? '완료' : '초안', sources: [...(sources.get(row.id) ?? [])],
-      why: row.why ?? '', problem: row.problem ?? '', solution: row.solution ?? '', result: row.result ?? '',
-      learned: row.learned ?? '', next: row.next_steps ?? '', memo: row.content,
-      tags: Array.isArray(ai.tags) ? ai.tags.filter((tag): tag is string => typeof tag === 'string') : [],
-      summary: typeof ai.summary === 'string' ? ai.summary : '',
-      before: typeof ai.before === 'string' ? ai.before : '', after: typeof ai.after === 'string' ? ai.after : '',
-      analysisData: ai,
-    };
+  return rows.map(row => toStory(row, sources.get(row.id)));
+}
+
+function toStory(row: StoryRow, linkedSources?: Set<Service>): Story {
+  const ai = row.ai_analysis && typeof row.ai_analysis === 'object' && !Array.isArray(row.ai_analysis)
+    ? row.ai_analysis as Record<string, unknown> : {};
+  const sourceChangeIds = Array.isArray(ai.sourceChangeIds)
+    ? ai.sourceChangeIds.filter((id): id is string => typeof id === 'string') : [];
+  const sources = new Set(linkedSources);
+  for (const service of services) {
+    if (sourceChangeIds.some(id => id.startsWith(service.toLowerCase() + ':'))) sources.add(service);
+  }
+  return {
+    id: String(row.id), title: row.title, date: row.created_at.slice(0, 10).replaceAll('-', '.'),
+    status: row.story_status === 'published' ? '완료' : '초안', sources: [...sources], sourceChangeIds,
+    why: row.why ?? '', problem: row.problem ?? '', solution: row.solution ?? '', result: row.result ?? '',
+    learned: row.learned ?? '', next: row.next_steps ?? '', memo: row.content,
+    tags: Array.isArray(ai.tags) ? ai.tags.filter((tag): tag is string => typeof tag === 'string') : [],
+    summary: typeof ai.summary === 'string' ? ai.summary : '',
+    before: typeof ai.before === 'string' ? ai.before : '', after: typeof ai.after === 'string' ? ai.after : '',
+    analysisData: ai,
+  };
+}
+
+function storyPayload(fields: StoryFields, metadata?: Record<string, unknown>) {
+  const { title, why, problem, solution, result, learned, next, memo, tags, summary, before, after } = fields;
+  return {
+    title, why, problem, solution, result, learned, next_steps: next, content: memo, story_status: 'published',
+    ai_analysis: { ...metadata, tags, summary, before, after },
+  };
+}
+
+export async function createStoredStory(projectId: string, fields: StoryFields, sourceChangeIds: string[]) {
+  // GitHub changes use repository + SHA. Only Figma and Notion changes carry database activity IDs.
+  const activityIds = sourceChangeIds.flatMap(id => {
+    const match = /^(?:figma|notion):([1-9]\d*)$/.exec(id);
+    return match ? [Number(match[1])] : [];
   });
+  const row = await projectRequest<StoryRow>('/stories', {
+    method: 'POST',
+    body: JSON.stringify({ ...storyPayload(fields, { sourceChangeIds }),
+      project_id: Number(projectId), activity_ids: activityIds }),
+  });
+  return toStory(row);
 }
 
 export function updateStoredStory(story: Story, fields: StoryFields) {
-  const { title, why, problem, solution, result, learned, next, memo, tags, summary, before, after } = fields;
-  return projectRequest('/stories/' + encodeURIComponent(story.id), { method: 'PATCH', body: JSON.stringify({
-    title, why, problem, solution, result, learned, next_steps: next, content: memo, story_status: 'published',
-    ai_analysis: { ...story.analysisData, tags, summary, before, after },
-  }) });
+  return projectRequest('/stories/' + encodeURIComponent(story.id), {
+    method: 'PATCH', body: JSON.stringify(storyPayload(fields, story.analysisData)),
+  });
 }
