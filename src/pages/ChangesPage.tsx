@@ -6,7 +6,6 @@ import { useProjects } from '../state/ProjectsContext';
 import type { FilterOption } from '../components/FilterSelect';
 import { MoodFilter } from '../components/MoodFilter';
 import { DateRangeFilter, type DateRange } from '../components/DateRangeFilter';
-import { ModeOptions } from '../components/ModeOptions';
 import { SearchField } from '../components/SearchField';
 import { SelectedChangeCard } from '../components/SelectedChangeCard';
 import { Badge, PageHeading, ServiceIcon, useDocumentTitle } from '../components/ui';
@@ -51,8 +50,9 @@ function matchesQuery(change: Change, query: string) {
 
 export function ChangesPage() {
   useDocumentTitle('변경사항 선택');
-  const { activeProject: project, selectedChangeIds, toggleChange, mode, setMode, analyze, activityStates, refreshActivities, figma } = useProjects();
+  const { activeProject: project, selectedChangeIds, toggleChange, analyze, analyzing, analysisError, cancelAnalysis, activityStates, refreshActivities, figma } = useProjects();
   const navigate = useNavigate();
+  useEffect(() => () => cancelAnalysis(), [cancelAnalysis]);
   const [searchParams, setSearchParams] = useSearchParams();
   const serviceParam = searchParams.get('service');
   const service = isService(serviceParam) ? serviceParam : 'all';
@@ -141,8 +141,9 @@ export function ChangesPage() {
     toggleChange(change.id);
   }
 
-  function startAnalysis() {
-    const result = analyze();
+  async function startAnalysis() {
+    if (analyzing) return;
+    const result = await analyze();
     if (result) navigate('/stories/analysis');
   }
 
@@ -219,6 +220,7 @@ export function ChangesPage() {
                   <FeedCard
                     change={change}
                     selected={selectedChangeIds.includes(change.id)}
+                    disabled={analyzing}
                     onToggle={() => toggleChange(change.id)}
                     onHide={() => hideChange(change)}
                   />
@@ -244,15 +246,11 @@ export function ChangesPage() {
             )}
           </section>
 
-          <section className={styles.panel} aria-labelledby="mode-heading">
-            <h2 id="mode-heading">분석 방식</h2>
-            <div className={styles.modes}>
-              <ModeOptions value={mode} onChange={setMode} />
-            </div>
-          </section>
+          <p role="status">변경사항은 최대 20개까지 선택할 수 있어요. ({selectedChanges.length}/20)</p>
+          {analysisError && <p role="alert">{analysisError}</p>}
 
-          <button type="button" className={`${ui.primaryButton} ${styles.analyzeButton}`} disabled={selectedChanges.length === 0} onClick={startAnalysis}>
-            AI Story 분석
+          <button type="button" className={`${ui.primaryButton} ${styles.analyzeButton}`} disabled={analyzing || selectedChanges.length === 0 || selectedChanges.length > 20} onClick={startAnalysis}>
+            {analyzing ? 'AI 분석 중…' : 'AI Story 분석'}
           </button>
         </div>
       </div>
@@ -263,12 +261,13 @@ export function ChangesPage() {
 type FeedCardProps = {
   change: Change;
   selected: boolean;
+  disabled?: boolean;
   onToggle: () => void;
   onHide: () => void;
 };
 
 // 카드 전체가 체크박스의 label이라 어디를 눌러도 선택됩니다. 숨기기 버튼은 label 밖에 겹쳐 둡니다.
-function FeedCard({ change, selected, onToggle, onHide }: FeedCardProps) {
+function FeedCard({ change, selected, disabled, onToggle, onHide }: FeedCardProps) {
   const titleId = `change-${change.id}-title`;
   const metaId = `change-${change.id}-meta`;
   return (
@@ -284,6 +283,7 @@ function FeedCard({ change, selected, onToggle, onHide }: FeedCardProps) {
             id={checkboxId(change)}
             type="checkbox"
             className={`${form.radio} ${styles.check}`}
+            disabled={disabled}
             checked={selected}
             onChange={onToggle}
             aria-labelledby={titleId}
@@ -294,7 +294,7 @@ function FeedCard({ change, selected, onToggle, onHide }: FeedCardProps) {
         <span className={styles.description}>{change.description}</span>
         <span className={styles.status}><Badge>{change.status}</Badge></span>
       </label>
-      <button type="button" className={styles.hide} onClick={onHide} aria-label={`${change.title} 목록에서 숨기기`}>
+      <button type="button" className={styles.hide} disabled={disabled} onClick={onHide} aria-label={`${change.title} 목록에서 숨기기`}>
         <img src={closeIcon} alt="" width="24" height="24" />
       </button>
     </div>

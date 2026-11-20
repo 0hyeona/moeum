@@ -4,7 +4,7 @@ import { githubChanges } from '../data/githubChanges';
 import type { GitHubCommit } from './github';
 
 type StoredActivity = {
-  project_id: number; source: string; story_id: number | null; external_id: string | null;
+  activity_id: number; project_id: number; source: string; story_id: number | null; external_id: string | null;
   branch_name: string | null; title: string; description: string | null;
   occurred_at: string; source_url: string | null;
 };
@@ -15,6 +15,7 @@ export async function readGithubActivities(id: string, url: string, signal: Abor
   const repository = githubRepository(url)?.toLowerCase();
   if (!repository) throw new Error('GitHub 저장소 URL을 확인해주세요.');
   const commits: StoredCommit[] = [];
+  const activityIds = new Map<string, number>();
   const pending: StoredCommit[] = [];
   for (let offset = 0; ; offset += 100) {
     const rows = await projectRequest<StoredActivity[]>(
@@ -31,12 +32,16 @@ export async function readGithubActivities(id: string, url: string, signal: Abor
       const date = /(?:Z|[+-]\d\d:\d\d)$/i.test(row.occurred_at) ? row.occurred_at : row.occurred_at + 'Z';
       const commit = { branch: row.branch_name, sha, message: row.description || row.title, date,
         merged: false, additions: null, deletions: null };
+      activityIds.set(sha, row.activity_id);
       commits.push(commit);
       if (row.story_id === null) pending.push(commit);
     }
     if (rows.length < 100) break;
   }
-  return { commits, changes: githubChanges(repository, pending) };
+  return { commits, changes: githubChanges(repository, pending).map((change, i) => {
+    const activityId = activityIds.get(pending[i].sha);
+    return activityId ? { ...change, id: 'github:' + activityId, activityId } : change;
+  }) };
 }
 
 export async function syncGithubActivities(id: string, signal: AbortSignal) {

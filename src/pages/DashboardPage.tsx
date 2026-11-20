@@ -1,3 +1,4 @@
+import { StoryLoadNotice } from '../components/StoryLoadNotice';
 import { useEffect } from 'react';
 import { Link, Navigate } from 'react-router';
 import type { ActivityState } from '../data/activity';
@@ -15,7 +16,7 @@ const retryTime = new Intl.DateTimeFormat('ko-KR', {
 
 export function DashboardPage() {
   useDocumentTitle('대시보드');
-  const { activeProject: project, activityStates, refreshActivities, githubCommits, figma } = useProjects();
+  const { activeProject: project, storyListState, githubCommits, activityStates, refreshActivities, figma } = useProjects();
   const { reload: reloadFigma } = figma;
   useEffect(() => reloadFigma(), [reloadFigma]);
   if (!project) return <Navigate to="/projects" replace />;
@@ -52,11 +53,14 @@ export function DashboardPage() {
                         {figma.syncing ? '수집 중…' : retryAt !== undefined ? '수집 대기 중' : '새로고침'}
                       </button>
                     )}
-                    {service !== 'Figma' && project.urls?.[service] && (
+                    {service === 'Notion' && project.urls?.Notion && (
                       <button type="button" className={styles.statButton} disabled={state.status === 'loading'}
-                        onClick={() => refreshActivities(service)} aria-label={state.status === 'ready' ? service + ' 새로고침' : undefined}>
+                        onClick={() => refreshActivities(service)} aria-label={state.status === 'ready' ? 'Notion 새로고침' : undefined}>
                         {state.status === 'loading' ? '수집 중…' : state.status === 'error' ? '다시 시도' : '새로고침'}
                       </button>
+                    )}
+                    {state.status === 'error' && service === 'GitHub' && (
+                      <button type="button" className={styles.statButton} onClick={() => refreshActivities(service)}>다시 시도</button>
                     )}
                   </div>
                   <div className={styles.statNotes}>
@@ -90,13 +94,14 @@ export function DashboardPage() {
             <h2 id="story-heading">최근 Story</h2>
             <Link to="/timeline">타임라인 보기</Link>
           </div>
+          <StoryLoadNotice />
           {project.stories.length > 0 ? (
             <ul className={styles.stories}>
               {project.stories.slice(0, 3).map((story) => <li key={story.id}><StoryCard story={story} className={styles.storyCard} /></li>)}
             </ul>
-          ) : (
+          ) : storyListState.status === 'ready' ? (
             <p className={styles.empty}>아직 작성된 Story가 없어요.</p>
-          )}
+          ) : null}
         </section>
 
       </div>

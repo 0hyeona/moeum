@@ -49,22 +49,22 @@ function downloadMarkdown(story: Story) {
 export function StoryDetailPage() {
   useDocumentTitle('Story 기록 보기');
   const { storyId } = useParams();
-  const { activeProject: project, timelineLoading, timelineError, retryTimeline, deleteStory } = useProjects();
-  const { story, switching } = useStory(storyId);
+  const { activeProject: project, deleteStory } = useProjects();
+  const { story, switching, error, retry } = useStory(storyId);
   const navigate = useNavigate();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
   if (!project) return <Navigate to="/projects" replace />;
 
-  if (!story) {
-    if (switching || timelineLoading) return <p role="status">Story를 불러오는 중이에요…</p>;
-    if (timelineError) return <><p role="alert">{timelineError}</p><button onClick={retryTimeline}>다시 시도</button></>;
+  if (switching) return <p role="status">Story를 불러오는 중이에요…</p>;
+  if (error || !story) {
     return (
       <div className={styles.page}>
         <PageHeading title="Story 기록 보기" />
         <div className={styles.notFound}>
-          <p>Story를 찾을 수 없어요.</p>
+          <p role="alert">{error || 'Story를 찾을 수 없어요.'}</p>
+          <button type="button" className={ui.secondaryButton} onClick={retry}>다시 불러오기</button>
           <Link to="/timeline">타임라인으로 돌아가기</Link>
         </div>
       </div>
@@ -72,15 +72,12 @@ export function StoryDetailPage() {
   }
 
   const remove = async () => {
-    if (pending) return;
-    setPending(true);
-    setError('');
-    try {
-      await deleteStory(story.id);
-      navigate('/timeline', { replace: true });
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : '삭제하지 못했어요.');
-    } finally { setPending(false); }
+    if (deleting) return;
+    setDeleting(true);
+    setDeleteError('');
+    try { await deleteStory(story.id); navigate('/timeline', { replace: true }); }
+    catch (cause) { setDeleteError(cause instanceof Error ? cause.message : '삭제하지 못했어요.'); }
+    finally { setDeleting(false); }
   };
 
   return (
@@ -130,7 +127,7 @@ export function StoryDetailPage() {
       </div>
 
       <div className={styles.actions}>
-        <Link to={`/stories/${story.id}/edit`} className={`${ui.secondaryButton} ${styles.button} ${styles.editButton}`}>수정</Link>
+        <Link to={`/stories/${story.id}/edit`} className={`${ui.secondaryButton} ${styles.button} ${styles.editButton}`}>{story.status === '초안' ? '이어서 작성' : '수정'}</Link>
         <button type="button" className={`${ui.secondaryButton} ${styles.button} ${styles.deleteButton}`} onClick={() => setConfirmingDelete(true)}>삭제</button>
         <button type="button" className={`${ui.primaryButton} ${styles.exportButton}`} onClick={() => downloadMarkdown(story)}>내보내기</button>
       </div>
@@ -139,11 +136,13 @@ export function StoryDetailPage() {
         <ConfirmDialog
           title="Story를 삭제할까요?"
           description="삭제한 Story는 되돌릴 수 없어요."
-          pending={pending}
           confirmLabel="삭제"
+          pending={deleting}
           onConfirm={remove}
           onCancel={() => setConfirmingDelete(false)}
-        >{error && <p role="alert">{error}</p>}</ConfirmDialog>
+        >
+          {deleteError && <p role="alert">{deleteError}</p>}
+        </ConfirmDialog>
       )}
     </div>
   );

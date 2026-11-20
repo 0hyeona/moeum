@@ -1,5 +1,5 @@
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
-import { createAnalysis, type Analysis, type AnalysisMode, type Project, type Service, type StoryFields } from '../data/projects';
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { emptyStoryFields, type Analysis, type AnalysisMode, type Project, type Service, type StoryFields } from '../data/projects';
 import * as projectApi from '../api/projects';
 import { useGithubActivities } from './useGithubActivities';
 import { syncNotionActivities } from '../api/externalActivities';
@@ -8,15 +8,16 @@ import { replaceServiceChanges, type ActivityState } from '../data/activity';
 import { SessionSkeleton } from '../components/Skeleton';
 import boundaryStyles from '../components/AuthBoundary.module.css';
 import { useAuth } from './AuthContext';
-import { createStoredStory, loadTimeline, updateStoredStory } from '../api/timeline';
-import { Navigate, useLocation } from 'react-router';
+import { Navigate } from 'react-router';
 import { ApiError } from '../api/client';
 import { clearAccessToken } from '../api/auth';
 import { useFigmaActivities } from './useFigmaActivities';
+import { useStoryStore } from './useStoryStore';
+import { analyzeActivities, type ServerStoryStatus } from '../api/stories';
 
 export type NewProject = { name: string; description: string; urls: Record<Service, string> };
 
-const todaysChangeIds = (project: Project | undefined) => project?.changes.filter((change) => change.daysAgo === 0).map((change) => change.id) ?? [];
+const todaysChangeIds = (project: Project | undefined) => project?.changes.filter((change) => change.daysAgo === 0).slice(0, 20).map((change) => change.id) ?? [];
 
 function useProjectsState() {
   const { user } = useAuth();
@@ -68,29 +69,16 @@ function useProjectsState() {
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [storyDrafts, setStoryDrafts] = useState<Record<string, Record<string, Partial<StoryFields>>>>({});
   const activeProject = projects.find((project) => project.id === activeProjectId);
-  const { pathname } = useLocation();const timelineProject =
-  ['/dashboard', '/timeline'].includes(pathname.replace(/\/$/, '')) ||
-  /^\/stories\/\d+(?:\/edit)?\/?$/.test(pathname)
-    ? activeProjectId
-    : null;
-  const [timelineAttempt, setTimelineAttempt] = useState(0);
-  const [timelineResult, setTimelineResult] = useState<{ id: string; error?: string } | null>(null);
+  const storyStore = useStoryStore(activeProjectId, setProjects);
+  const analysisRequest = useRef<AbortController | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analysisError, setAnalysisError] = useState('');
+  useEffect(() => () => analysisRequest.current?.abort(), []);
   useEffect(() => {
-    setTimelineResult(null);
-    if (!timelineProject) return;
-    const controller = new AbortController();
-    loadTimeline(timelineProject, controller.signal).then(stories => {
-      if (controller.signal.aborted) return;
-      setProjects(current => current.map(project => project.id !== timelineProject ? project : {
-        ...project, stories: [...project.stories.filter(story => !/^\d+$/.test(story.id)), ...stories],
-      }));
-      setTimelineResult({ id: timelineProject });
-    }).catch(error => {
-      if (!controller.signal.aborted) setTimelineResult({ id: timelineProject,
-        error: error instanceof Error ? error.message : '타임라인을 불러오지 못했어요.' });
-    });
-    return () => controller.abort();
-  }, [timelineProject, timelineAttempt]);
+    analysisRequest.current?.abort();
+    setAnalyzing(false);
+    setAnalysisError('');
+  }, [activeProjectId]);
   const figma = useFigmaActivities(user.id, activeProject, setProjects);
   const github = useGithubActivities(activeProject, setProjects);
   const githubSync = github.state;
@@ -157,13 +145,14 @@ function useProjectsState() {
     setProjects((current) => current.map((project) => project.id === activeProjectId ? update(project) : project));
   }
 
-  function selectProject(id: string) {
+  const selectProject = useCallback((id: string) => {
     if (id === activeProjectId) return;
+    analysisRequest.current?.abort();
     setActiveProjectId(id);
     setSelectedChangeIds(todaysChangeIds(projects.find((project) => project.id === id)));
     setMode('의미 중심');
     setAnalysis(null);
-  }
+  }, [activeProjectId, projects]);
 
   async function createProject({ name, description, urls }: NewProject) {
     const data = await projectApi.createProject({ project_name: name, description,
@@ -225,63 +214,84 @@ function useProjectsState() {
   }
 
   function toggleChange(id: string) {
-    setSelectedChangeIds((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
+    if (analyzing) return;
+    setSelectedChangeIds((current) => current.includes(id) ? current.filter((item) => item !== id) : current.length < 20 ? [...current, id] : current);
   }
 
-  // s5 "AI Story 분석", s6 변경사항 제외: 주어진(기본값은 현재 선택한) 변경사항으로 분석 결과를 만들고 반환합니다.
-  function analyze(changeIds = selectedChangeIds) {
-    const changes = activeProject?.changes.filter((change) => changeIds.includes(change.id)) ?? [];
-    if (!changes.length) return null;
-    setSelectedChangeIds(changeIds);
-    const result = createAnalysis(changes, mode);
-    setAnalysis(result);
-    return result;
-  }
-
-  function updateAnalysis(fields: Partial<Omit<Analysis, 'changeIds' | 'mode'>>) {
-    setAnalysis((current) => current && { ...current, ...fields });
-  }
-
-  function clearAnalysis() {
-    setAnalysis(null);
-  }
-
-  // s7 "Story 작성 완료": id가 있으면 수정, 없으면 분석 결과를 출처로 새 Story를 만듭니다. 저장한 Story의 id를 반환합니다.
-  async function saveStory(fields: StoryFields, id?: string) {
-    const existing = activeProject?.stories.find((story) => story.id === id);
-    if (existing && /^\d+$/.test(existing.id)) await updateStoredStory(existing, fields);
-    if (existing) {
-      clearStoryDraft(id);
-      updateActive((project) => ({ ...project, stories: project.stories.map((story) => story.id === existing.id ? { ...story, ...fields, status: '완료' } : story) }));
-      return existing.id;
+  const cancelAnalysis = useCallback(() => {
+    analysisRequest.current?.abort();
+    setAnalyzing(false);
+  }, []);
+  async function analyze(changeIds = selectedChangeIds) {
+    const projectId = activeProjectId;
+    if (!projectId) return null;
+    const changes = activeProject?.changes.filter(change => changeIds.includes(change.id)) ?? [];
+    const controller = new AbortController();
+    analysisRequest.current?.abort();
+    analysisRequest.current = controller;
+    setAnalyzing(true);
+    setAnalysisError('');
+    try {
+      const result = { ...await analyzeActivities(projectId, changes, controller.signal), changeIds, projectId, mode };
+      if (controller.signal.aborted) return null;
+      setSelectedChangeIds(changeIds);
+      setAnalysis(result);
+      return result;
+    } catch (error) {
+      if (!controller.signal.aborted) setAnalysisError(error instanceof Error ? error.message : 'AI 분석에 실패했어요. 다시 시도해주세요.');
+      return null;
+    } finally {
+      if (analysisRequest.current === controller) setAnalyzing(false);
     }
-    if (!activeProject) throw new Error('프로젝트를 선택해주세요.');
-    const story = await createStoredStory(activeProject.id, fields, analysis?.changeIds ?? []);
-    clearStoryDraft(id);
-    updateActive((project) => ({
-      ...project,
-      stories: [story, ...project.stories],
-      changes: project.changes.filter((change) => !analysis?.changeIds.includes(change.id)),
-    }));
-    setSelectedChangeIds([]);
+  }
+  function updateAnalysis(fields: Partial<Omit<Analysis, 'changeIds' | 'mode'>>) {
+    setAnalysis(current => current && { ...current, ...fields });
+  }
+  const clearAnalysis = useCallback(() => {
+    analysisRequest.current?.abort();
     setAnalysis(null);
+  }, []);
+  async function createStoryDraft(fields?: StoryFields) {
+    if (!activeProject) throw new Error('프로젝트를 선택해주세요.');
+    const selected = !fields && analysis?.projectId === activeProject.id ? analysis : null;
+    const changes = selected ? activeProject.changes.filter(change => selected.changeIds.includes(change.id)) : [];
+    if (selected && changes.length !== selected.changeIds.length) throw new Error('선택한 변경사항이 달라졌어요. 변경사항을 다시 선택해주세요.');
+    const values = fields ?? { ...emptyStoryFields, ...selected, tags: selected?.tags ?? [] };
+    const story = await storyStore.createDraft(activeProject.id, values, changes);
+    setSelectedChangeIds([]);
     return story.id;
   }
-
+  async function saveStory(fields: Partial<StoryFields>, id: string, status?: ServerStoryStatus) {
+    const projectId = activeProjectId;
+    const key = draftKey(id);
+    const story = await storyStore.saveStory(id, fields, status);
+    // An older response must not erase typing that happened while its request was running.
+    if (projectId) setStoryDrafts(current => {
+      const draft = { ...current[projectId]?.[key] };
+      for (const field of Object.keys(fields) as (keyof StoryFields)[]) {
+        if (JSON.stringify(draft[field]) === JSON.stringify(fields[field])) delete draft[field];
+      }
+      return { ...current, [projectId]: { ...current[projectId], [key]: draft } };
+    });
+    return story.id;
+  }
   async function deleteStory(id: string) {
-    if (/^\d+$/.test(id)) await projectApi.projectRequest('/stories/' + id, { method: 'DELETE' });
+    const projectId = await storyStore.deleteStory(id);
     clearStoryDraft(id);
-    updateActive((project) => ({ ...project, stories: project.stories.filter((story) => story.id !== id) }));
+    // Service loaders expose any refresh failure without undoing a successful deletion.
+    if (projectId === activeProjectId) {
+      refreshActivities('GitHub');
+      refreshActivities('Notion');
+      figma.reload();
+    }
   }
 
   return {
+    ...storyStore, createStoryDraft, analyzing, analysisError, cancelAnalysis,
     loading, loadError, expired, retry: () => setAttempt(value => value + 1),
-    timelineLoading: !!timelineProject && timelineResult?.id !== timelineProject,
-    timelineError: timelineResult?.id === timelineProject ? timelineResult?.error : undefined,
-    retryTimeline: () => setTimelineAttempt(value => value + 1),
-    saveConnection, projects,
+    projects,
     activeProject,
-    githubCommits: github.commits, githubSync, refreshGithubChanges, activityStates, refreshActivities, figma,
+    saveConnection, githubCommits: github.commits, githubSync, refreshGithubChanges, activityStates, refreshActivities, figma,
     selectProject,
     createProject,
     updateProject,
@@ -320,13 +330,27 @@ export function useProjects() {
   return value;
 }
 
-// /stories/:id 로 Story를 찾습니다. 다른 프로젝트의 Story면 그 프로젝트로 바꾸고, 바꾸는 동안 switching이 true입니다.
+// Always resolve the route ID from the server, including after a reload or cross-project link.
 export function useStory(storyId: string | undefined) {
-  const { projects, activeProject, selectProject } = useProjects();
-  const story = activeProject?.stories.find((item) => item.id === storyId);
-  const ownerId = story ? undefined : projects.find((project) => project.stories.some((item) => item.id === storyId))?.id;
+  const { projects, activeProject, selectProject, loadStory } = useProjects();
+  const [state, setState] = useState<{ id?: string; status: 'loading' | 'ready' | 'error'; error?: string }>({ status: 'loading' });
+  const [attempt, setAttempt] = useState(0);
+  const select = useRef(selectProject);
+  select.current = selectProject;
   useEffect(() => {
-    if (ownerId) selectProject(ownerId);
-  }, [ownerId, selectProject]);
-  return { story, switching: ownerId !== undefined };
+    if (!storyId) return;
+    const controller = new AbortController();
+    setState({ id: storyId, status: 'loading' });
+    loadStory(storyId, controller.signal).then(story => {
+      if (controller.signal.aborted) return;
+      select.current(story.projectId!);
+      setState({ id: storyId, status: 'ready' });
+    }).catch(error => {
+      if (!controller.signal.aborted) setState({ id: storyId, status: 'error', error: error instanceof Error ? error.message : 'Story를 불러오지 못했어요.' });
+    });
+    return () => controller.abort();
+  }, [storyId, attempt, loadStory]);
+  const story = projects.flatMap(project => project.stories).find(item => item.id === storyId);
+  return { story, switching: Boolean(storyId) && (state.id !== storyId || state.status === 'loading' || (state.status === 'ready' && story?.projectId !== activeProject?.id)),
+    error: state.id === storyId && state.status === 'error' ? state.error : '', retry: () => setAttempt(value => value + 1) };
 }
