@@ -1,5 +1,6 @@
 import { StoryLoadNotice } from '../components/StoryLoadNotice';
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { startNotionConnection } from '../api/notion';
 import { Link, Navigate } from 'react-router';
 import type { ActivityState } from '../data/activity';
 import { services, type ServiceState } from '../data/projects';
@@ -64,6 +65,9 @@ export function DashboardPage() {
                     )}
                   </div>
                   <div className={styles.statNotes}>
+                    {service === 'Notion' && state.status === 'error' && (
+                      <NotionConnectAction />
+                    )}
                     {state.status === 'error' && <p className={styles.statError} role="alert">{state.error}</p>}
                     {state.status === 'error' && service === 'Figma' && (
                       <button type="button" className={styles.statButton} disabled={figma.syncing} onClick={figma.reload}>목록 다시 조회</button>
@@ -111,6 +115,33 @@ export function DashboardPage() {
       </div>
     </div>
   );
+}
+
+function NotionConnectAction() {
+  const busy = useRef(false);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState('');
+
+  async function connect() {
+    if (busy.current) return;
+    busy.current = true;
+    setPending(true);
+    setError('');
+    try {
+      await startNotionConnection('/dashboard');
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Notion 승인 화면을 열지 못했어요.');
+      busy.current = false;
+      setPending(false);
+    }
+  }
+
+  return <>
+    <button type="button" className={styles.statButton} disabled={pending} onClick={() => void connect()}>
+      {pending ? 'Notion 승인 화면 여는 중…' : 'Notion 계정 연결'}
+    </button>
+    {error && <p className={styles.statError} role="alert">{error}</p>}
+  </>;
 }
 
 function PendingCount({ state, count, sync }: { state: ServiceState; count: number; sync: ActivityState['status'] }) {
