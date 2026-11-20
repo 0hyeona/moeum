@@ -15,7 +15,7 @@ const retryTime = new Intl.DateTimeFormat('ko-KR', {
 
 export function DashboardPage() {
   useDocumentTitle('대시보드');
-  const { activeProject: project, activityStates, refreshActivities, figma } = useProjects();
+  const { activeProject: project, activityStates, refreshActivities, githubCommits, figma } = useProjects();
   const { reload: reloadFigma } = figma;
   useEffect(() => reloadFigma(), [reloadFigma]);
   if (!project) return <Navigate to="/projects" replace />;
@@ -52,14 +52,11 @@ export function DashboardPage() {
                         {figma.syncing ? '수집 중…' : retryAt !== undefined ? '수집 대기 중' : '새로고침'}
                       </button>
                     )}
-                    {service === 'Notion' && project.urls?.Notion && (
+                    {service !== 'Figma' && project.urls?.[service] && (
                       <button type="button" className={styles.statButton} disabled={state.status === 'loading'}
-                        onClick={() => refreshActivities(service)} aria-label={state.status === 'ready' ? 'Notion 새로고침' : undefined}>
+                        onClick={() => refreshActivities(service)} aria-label={state.status === 'ready' ? service + ' 새로고침' : undefined}>
                         {state.status === 'loading' ? '수집 중…' : state.status === 'error' ? '다시 시도' : '새로고침'}
                       </button>
-                    )}
-                    {state.status === 'error' && service === 'GitHub' && (
-                      <button type="button" className={styles.statButton} onClick={() => refreshActivities(service)}>다시 시도</button>
                     )}
                   </div>
                   <div className={styles.statNotes}>
@@ -105,7 +102,7 @@ export function DashboardPage() {
       </div>
 
       <div className={styles.bottomRow}>
-        <GitHubActivity onRefresh={() => refreshActivities('GitHub')} key={project.id} url={project.urls?.GitHub ?? ''} />
+        <GitHubActivity state={activityStates.GitHub} commits={githubCommits} onRefresh={() => refreshActivities('GitHub')} key={project.id} url={project.urls?.GitHub ?? ''} />
       </div>
     </div>
   );

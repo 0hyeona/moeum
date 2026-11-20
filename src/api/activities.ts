@@ -1,16 +1,59 @@
-import type { Change, Service } from '../data/projects';
+import { projectRequest } from './projects';
+import { githubRepository } from '../data/github';
 import { githubChanges } from '../data/githubChanges';
-import { loadGitHubChangeCommits, loadGitHubRepository } from './github';
-import { syncNotionActivities } from './externalActivities';
+import type { GitHubCommit } from './github';
 
-export type ActivityRequest = { projectId: string; service: Service; url: string; signal: AbortSignal };
-export type ActivityLoader = (request: ActivityRequest) => Promise<Change[]>;
-
-// [] means a successful request with no unorganized changes; failures throw.
-export const activityLoaders: Record<Exclude<Service, 'Figma'>, ActivityLoader> = {
-  GitHub: async ({ url, signal }) => {
-    const repository = await loadGitHubRepository(url, signal);
-    return githubChanges(repository.name, await loadGitHubChangeCommits(url, repository.branches, signal));
-  },
-  Notion: syncNotionActivities,
+type StoredActivity = {
+  project_id: number; source: string; story_id: number | null; external_id: string | null;
+  branch_name: string | null; title: string; description: string | null;
+  occurred_at: string; source_url: string | null;
 };
+export type StoredCommit = GitHubCommit & { branch: string | null };
+const projectPath = (id: string) => '/api/projects/' + encodeURIComponent(id);
+
+export async function readGithubActivities(id: string, url: string, signal: AbortSignal) {
+  const repository = githubRepository(url)?.toLowerCase();
+  if (!repository) throw new Error('GitHub 저장소 URL을 확인해주세요.');
+  const commits: StoredCommit[] = [];
+  const pending: StoredCommit[] = [];
+  for (let offset = 0; ; offset += 100) {
+    const rows = await projectRequest<StoredActivity[]>(
+      projectPath(id) + '/activities?source=github&limit=100&offset=' + offset, { signal });
+    for (const row of rows) {
+      if (String(row.project_id) !== id || row.source !== 'github') continue;
+      const sha = row.external_id?.split(':').pop();
+      if (!sha || !/^[0-9a-f]{7,40}$/i.test(sha)) continue;
+      // Old repositories can still have activities after the project URL changes.
+      const scopedId = repository + ':' + sha;
+      const commitUrl = 'https://github.com/' + repository + '/commit/' + sha;
+      if (row.external_id?.toLowerCase() !== scopedId.toLowerCase()
+        && row.source_url?.toLowerCase() !== commitUrl.toLowerCase()) continue;
+      const date = /(?:Z|[+-]\d\d:\d\d)$/i.test(row.occurred_at) ? row.occurred_at : row.occurred_at + 'Z';
+      const commit = { branch: row.branch_name, sha, message: row.description || row.title, date,
+        merged: false, additions: null, deletions: null };
+      commits.push(commit);
+      if (row.story_id === null) pending.push(commit);
+    }
+    if (rows.length < 100) break;
+  }
+  return { commits, changes: githubChanges(repository, pending) };
+}
+
+export async function syncGithubActivities(id: string, signal: AbortSignal) {
+  const path = projectPath(id) + '/github';
+  // Discover branches and import their history only on explicit refresh.
+  const branches = new Set<string>();
+  for (let page = 1; ; page++) {
+    const result = await projectRequest<{ items: { name: string }[]; has_next: boolean }>(
+      path + '/branches?page=' + page + '&per_page=100', { signal });
+    result.items.forEach(item => branches.add(item.name));
+    if (!result.has_next) break;
+  }
+  for (const branch of branches) {
+    for (let page = 1; ; page++) {
+      const query = new URLSearchParams({ branch, page: String(page), per_page: '100' });
+      const result = await projectRequest<{ has_next: boolean }>(path + '/sync?' + query, { method: 'POST', signal });
+      if (!result.has_next) break;
+    }
+  }
+}
