@@ -1,9 +1,9 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { emptyStoryFields, type Analysis, type AnalysisMode, type Project, type Service, type StoryFields } from '../data/projects';
 import * as projectApi from '../api/projects';
-import { activityLoaders } from '../api/activities';
+import { useGithubActivities } from './useGithubActivities';
+import { syncNotionActivities } from '../api/externalActivities';
 import { replaceServiceChanges, type ActivityState } from '../data/activity';
-import { services } from '../data/projects';
 
 import { SessionSkeleton } from '../components/Skeleton';
 import boundaryStyles from '../components/AuthBoundary.module.css';
@@ -80,43 +80,35 @@ function useProjectsState() {
     setAnalysisError('');
   }, [activeProjectId]);
   const figma = useFigmaActivities(user.id, activeProject, setProjects);
-  type OtherService = Exclude<Service, 'Figma'>;
-  const [activityAttempt, setActivityAttempt] = useState<Record<OtherService, number>>({ GitHub: 0, Notion: 0 });
-  const [activityResults, setActivityResults] = useState<Record<string, ActivityState>>({});
-  const activityKey = JSON.stringify([activeProjectId, ...services.map(service => activeProject?.urls?.[service] ?? '')]);
-  const getActivityState = (service: OtherService): ActivityState => !activeProject?.urls?.[service]
-    ? { status: 'disconnected' } : activityResults[activityKey + service] ?? { status: 'loading' };
-  const activityStates = { GitHub: getActivityState('GitHub'), Figma: figma.listState, Notion: getActivityState('Notion') };
-  function refreshActivities(service: OtherService) {
-    setActivityAttempt(value => ({ ...value, [service]: value[service] + 1 }));
+  const github = useGithubActivities(activeProject, setProjects);
+  const githubSync = github.state;
+  const refreshGithubChanges = github.refresh;
+  const notionUrl = activeProject?.urls?.Notion;
+  const notionKey = JSON.stringify([activeProjectId, notionUrl]);
+  const [notionAttempt, setNotionAttempt] = useState(0);
+  const [notion, setNotion] = useState<{ key: string; state: ActivityState }>();
+  const notionState: ActivityState = !notionUrl ? { status: 'disconnected' } :
+    notion?.key === notionKey ? notion.state : { status: 'loading' };
+  const activityStates = { GitHub: github.state, Figma: figma.listState, Notion: notionState };
+  function refreshActivities(service: Exclude<Service, 'Figma'>) {
+    if (service === 'GitHub') github.refresh();
+    else setNotionAttempt(value => value + 1);
   }
-  const githubSync = activityStates.GitHub;
-  const refreshGithubChanges = () => refreshActivities('GitHub');
-
-  function loadActivity(service: OtherService) {
-    if (!activeProjectId) return;
+  useEffect(() => {
+    if (!activeProjectId || !notionUrl) return;
     const controller = new AbortController();
-    const [projectId, ...urls] = JSON.parse(activityKey) as string[];
-    const index = services.indexOf(service);
-      const loader = activityLoaders[service];
-      const url = urls[index];
-      if (!url || !loader) return;
-      const key = activityKey + service;
-      setActivityResults(current => ({ ...current, [key]: { status: 'loading' } }));
-      Promise.resolve().then(() => loader({ projectId, service, url, signal: controller.signal })).then(incoming => {
-        if (controller.signal.aborted) return;
-        setProjects(current => current.map(project => project.id === projectId && project.urls?.[service] === url
-          ? replaceServiceChanges(project, service, incoming) : project));
-        setActivityResults(current => ({ ...current, [key]: { status: 'ready' } }));
-      }).catch(error => {
-        if (!controller.signal.aborted) setActivityResults(current => ({ ...current, [key]: {
-          status: 'error', error: error instanceof Error ? error.message : service + ' 변경사항을 불러오지 못했어요.',
-        } }));
-      });
+    setNotion({ key: notionKey, state: { status: 'loading' } });
+    syncNotionActivities({ projectId: activeProjectId, signal: controller.signal }).then(changes => {
+      if (controller.signal.aborted) return;
+      setProjects(items => items.map(item => item.id === activeProjectId && item.urls?.Notion === notionUrl
+        ? replaceServiceChanges(item, 'Notion', changes) : item));
+      setNotion({ key: notionKey, state: { status: 'ready' } });
+    }).catch(error => {
+      if (!controller.signal.aborted) setNotion({ key: notionKey, state: { status: 'error',
+        error: error instanceof Error ? error.message : 'Notion 변경사항을 불러오지 못했어요.' } });
+    });
     return () => controller.abort();
-  }
-  useEffect(() => loadActivity('GitHub'), [activityKey, activityAttempt.GitHub]);
-  useEffect(() => loadActivity('Notion'), [activityKey, activityAttempt.Notion]);
+  }, [activeProjectId, notionUrl, notionKey, notionAttempt]);
 
   // 프로젝트와 출처 조합별로 입력한 필드만 보관해 다른 Story에 섞이지 않게 합니다.
   function draftKey(storyId?: string) {
@@ -180,6 +172,19 @@ function useProjectsState() {
     await enqueue(async () => {
       const data = await projectApi.updateProject(id, { ...rest, ...(name === undefined ? {} : { project_name: name }) });
       setProjects(current => current.map(project => project.id === String(data.id) ? projectApi.toProject(data, project) : project));
+    });
+  }
+
+  async function saveConnection(service: Service, url: string | null) {
+    const id = activeProjectId;
+    if (!id) throw new Error('프로젝트를 선택해주세요.');
+    return enqueue(async () => {
+      const { connections } = await projectApi.saveConnection(id, service, url);
+      const urlFor = (name: string) => connections.find(item => item.source === name)?.external_url ?? '';
+      const urls = { GitHub: urlFor('github'), Notion: urlFor('notion'), Figma: urlFor('figma') };
+      setProjects(current => current.map(project => project.id === id
+        ? { ...project, ...projectApi.projectLinks(urls, project) } : project));
+      return connections;
     });
   }
 
@@ -286,7 +291,7 @@ function useProjectsState() {
     loading, loadError, expired, retry: () => setAttempt(value => value + 1),
     projects,
     activeProject,
-    githubSync, refreshGithubChanges, activityStates, refreshActivities, figma,
+    saveConnection, githubCommits: github.commits, githubSync, refreshGithubChanges, activityStates, refreshActivities, figma,
     selectProject,
     createProject,
     updateProject,

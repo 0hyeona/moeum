@@ -47,6 +47,7 @@ export type StoryFields = {
 export type Story = StoryFields & {
   projectId?: string;
   updatedAt?: string;
+  analysisData?: Record<string, unknown>;
   rawAnalysis?: Record<string, unknown>;
   sourceChangeIds?: string[];
   id: string;

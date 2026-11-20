@@ -1,0 +1,417 @@
+diff --git a/src/api/activities.ts b/src/api/activities.ts
+index 9b1174d..0bff33e 100644
+--- a/src/api/activities.ts
++++ b/src/api/activities.ts
+@@ -1,16 +1,59 @@
+-import type { Change, Service } from '../data/projects';
++import { projectRequest } from './projects';
++import { githubRepository } from '../data/github';
+ import { githubChanges } from '../data/githubChanges';
+-import { loadGitHubChangeCommits, loadGitHubRepository } from './github';
+-import { syncNotionActivities } from './externalActivities';
++import type { GitHubCommit } from './github';
+ 
+-export type ActivityRequest = { projectId: string; service: Service; url: string; signal: AbortSignal };
+-export type ActivityLoader = (request: ActivityRequest) => Promise<Change[]>;
+-
+-// [] means a successful request with no unorganized changes; failures throw.
+-export const activityLoaders: Record<Exclude<Service, 'Figma'>, ActivityLoader> = {
+-  GitHub: async ({ url, signal }) => {
+-    const repository = await loadGitHubRepository(url, signal);
+-    return githubChanges(repository.name, await loadGitHubChangeCommits(url, repository.branches, signal));
+-  },
+-  Notion: syncNotionActivities,
++type StoredActivity = {
++  project_id: number; source: string; story_id: number | null; external_id: string | null;
++  branch_name: string | null; title: string; description: string | null;
++  occurred_at: string; source_url: string | null;
+ };
++export type StoredCommit = GitHubCommit & { branch: string | null };
++const projectPath = (id: string) => '/api/projects/' + encodeURIComponent(id);
++
++export async function readGithubActivities(id: string, url: string, signal: AbortSignal) {
++  const repository = githubRepository(url)?.toLowerCase();
++  if (!repository) throw new Error('GitHub 저장소 URL을 확인해주세요.');
++  const commits: StoredCommit[] = [];
++  const pending: StoredCommit[] = [];
++  for (let offset = 0; ; offset += 100) {
++    const rows = await projectRequest<StoredActivity[]>(
++      projectPath(id) + '/activities?source=github&limit=100&offset=' + offset, { signal });
++    for (const row of rows) {
++      if (String(row.project_id) !== id || row.source !== 'github') continue;
++      const sha = row.external_id?.split(':').pop();
++      if (!sha || !/^[0-9a-f]{7,40}$/i.test(sha)) continue;
++      // Old repositories can still have activities after the project URL changes.
++      const scopedId = repository + ':' + sha;
++      const commitUrl = 'https://github.com/' + repository + '/commit/' + sha;
++      if (row.external_id?.toLowerCase() !== scopedId.toLowerCase()
++        && row.source_url?.toLowerCase() !== commitUrl.toLowerCase()) continue;
++      const date = /(?:Z|[+-]\d\d:\d\d)$/i.test(row.occurred_at) ? row.occurred_at : row.occurred_at + 'Z';
++      const commit = { branch: row.branch_name, sha, message: row.description || row.title, date,
++        merged: false, additions: null, deletions: null };
++      commits.push(commit);
++      if (row.story_id === null) pending.push(commit);
++    }
++    if (rows.length < 100) break;
++  }
++  return { commits, changes: githubChanges(repository, pending) };
++}
++
++export async function syncGithubActivities(id: string, signal: AbortSignal) {
++  const path = projectPath(id) + '/github';
++  // Discover branches and import their history only on explicit refresh.
++  const branches = new Set<string>();
++  for (let page = 1; ; page++) {
++    const result = await projectRequest<{ items: { name: string }[]; has_next: boolean }>(
++      path + '/branches?page=' + page + '&per_page=100', { signal });
++    result.items.forEach(item => branches.add(item.name));
++    if (!result.has_next) break;
++  }
++  for (const branch of branches) {
++    for (let page = 1; ; page++) {
++      const query = new URLSearchParams({ branch, page: String(page), per_page: '100' });
++      const result = await projectRequest<{ has_next: boolean }>(path + '/sync?' + query, { method: 'POST', signal });
++      if (!result.has_next) break;
++    }
++  }
++}
+diff --git a/src/components/GitHubActivity.tsx b/src/components/GitHubActivity.tsx
+index 547ed91..c7290a6 100644
+--- a/src/components/GitHubActivity.tsx
++++ b/src/components/GitHubActivity.tsx
+@@ -1,5 +1,6 @@
+-import { useEffect, useState } from 'react';
++import { useState } from 'react';
+ import { Link } from 'react-router';
+-import { loadGitHubRepository, loadGitHubCommits, type GitHubRepository, type GitHubCommit } from '../api/github';
+-import { Badge, ServiceIcon } from './ui';
++import type { StoredCommit } from '../api/activities';
++import type { ActivityState } from '../data/activity';
++import { ServiceIcon } from './ui';
+ import ui from './ui.module.css';
+@@ -7,3 +8,6 @@ import styles from '../pages/DashboardPage.module.css';
+ 
+-export function GitHubActivity({ url, onRefresh }: { url: string; onRefresh?: () => void }) {
++type Props = { url: string; state: ActivityState; commits: StoredCommit[]; onRefresh: () => void };
++
++export function GitHubActivity(props: Props) {
++  const { url } = props;
+   return (
+@@ -18,3 +22,3 @@ export function GitHubActivity({ url, onRefresh }: { url: string; onRefresh?: ()
+         </div>
+-      </> : <ConnectedActivity key={url} url={url} onRefresh={onRefresh} />}
++      </> : <ConnectedActivity key={url} {...props} />}
+     </section>
+@@ -23,41 +27,11 @@ export function GitHubActivity({ url, onRefresh }: { url: string; onRefresh?: ()
+ 
+-type RepositoryState = { data?: GitHubRepository; error?: string };
+-type CommitState = { branch: string; data?: GitHubCommit[]; error?: string };
+-
+-function ConnectedActivity({ url, onRefresh }: { url: string; onRefresh?: () => void }) {
+-  const [repository, setRepository] = useState<RepositoryState>({});
+-  const [selectedBranch, setSelectedBranch] = useState('');
+-  const [commits, setCommits] = useState<CommitState>({ branch: '' });
+-  const [attempt, setAttempt] = useState(0);
+-  useEffect(() => {
+-    const controller = new AbortController();
+-    setRepository({});
+-    loadGitHubRepository(url, controller.signal).then(data => {
+-      if (controller.signal.aborted) return;
+-      setRepository({ data });
+-      setSelectedBranch(current => data.branches.includes(current) ? current : data.branches[0] ?? '');
+-    }).catch(error => {
+-      if (!controller.signal.aborted) setRepository({ error: error instanceof Error ? error.message : '저장소를 불러오지 못했어요.' });
+-    });
+-    return () => controller.abort();
+-  }, [url, attempt]);
+-
+-  useEffect(() => {
+-    if (!repository.data || !selectedBranch || !repository.data.branches.includes(selectedBranch)) return;
+-    const controller = new AbortController();
+-    setCommits({ branch: selectedBranch });
+-    loadGitHubCommits(url, selectedBranch, controller.signal).then(data => {
+-      if (!controller.signal.aborted) setCommits({ branch: selectedBranch, data });
+-    }).catch(error => {
+-      if (!controller.signal.aborted) setCommits({ branch: selectedBranch, error: error instanceof Error ? error.message : '커밋을 불러오지 못했어요.' });
+-    });
+-    return () => controller.abort();
+-  }, [url, repository.data, selectedBranch]);
+-
+-  const hasBranches = Boolean(repository.data?.branches.length);
+-  const current = commits.branch === selectedBranch ? commits : { branch: selectedBranch };
+-  const error = repository.error ?? (hasBranches ? current.error : undefined);
+-  const loading = !error && (!repository.data || (hasBranches && !current.data));
+-  const repositoryUrl = repository.data ? `https://github.com/${repository.data.name}` : '';
+-  const historyUrl = `${repositoryUrl}/commits/${encodeURIComponent(selectedBranch)}`;
++function ConnectedActivity({ url, state, commits, onRefresh }: Props) {
++  const [branch, setBranch] = useState('');
++  const branches = [...new Set(commits.flatMap(commit => commit.branch ? [commit.branch] : []))];
++  const selectedBranch = branches.includes(branch) ? branch : '';
++  const recent = commits.filter(commit => !selectedBranch || commit.branch === selectedBranch).slice(0, 5);
++  const repositoryUrl = url.trim().replace(/\/?$/, '').replace(/\.git$/, '');
++  const historyUrl = selectedBranch ? repositoryUrl + '/commits/' + encodeURIComponent(selectedBranch) : repositoryUrl;
++  const loading = state.status === 'loading';
++  const error = state.status === 'error' ? state.error : '';
+ 
+@@ -67,9 +41,9 @@ function ConnectedActivity({ url, onRefresh }: { url: string; onRefresh?: () =>
+       <div className={styles.githubActions}>
+-        <button type="button" className={styles.refreshButton} disabled={loading} onClick={() => { setAttempt(value => value + 1); onRefresh?.(); }}>새로고침</button>
+-        {repositoryUrl && hasBranches && <a href={historyUrl} target="_blank" rel="noreferrer">GitHub에서 전체 보기</a>}
++        <button type="button" className={styles.refreshButton} disabled={loading} onClick={onRefresh}>새로고침</button>
++        {repositoryUrl && commits.length > 0 && <a href={historyUrl} target="_blank" rel="noreferrer">GitHub에서 전체 보기</a>}
+       </div>
+     </div>
+-    {repository.data && hasBranches && <div className={styles.branches} role="group" aria-label="브랜치 필터">
+-      {repository.data.branches.map(branch => <button key={branch} type="button" className={styles.branch}
+-        aria-pressed={selectedBranch === branch} onClick={() => setSelectedBranch(branch)}>{branch}</button>)}
++    {branches.length > 0 && <div className={styles.branches} role="group" aria-label="브랜치 필터">
++      {['', ...branches].map(branch => <button key={branch} type="button" className={styles.branch}
++        aria-pressed={selectedBranch === branch} onClick={() => setBranch(branch)}>{branch || '전체'}</button>)}
+     </div>}
+@@ -78,7 +52,7 @@ function ConnectedActivity({ url, onRefresh }: { url: string; onRefresh?: () =>
+       <div className={styles.githubActions}>
+-        <button type="button" className={ui.primaryButton} onClick={() => { setAttempt(value => value + 1); onRefresh?.(); }}>다시 시도</button>
++        <button type="button" className={ui.primaryButton} onClick={onRefresh}>다시 시도</button>
+         <Link to="/settings#settings-url-GitHub">연결 설정 확인</Link>
+       </div>
+-    </div> : loading ? <p className={styles.empty} role="status">GitHub 기록을 불러오는 중이에요…</p>
+-      : !hasBranches || !current.data?.length ? <p className={styles.empty} role="status">{selectedBranch ? `${selectedBranch} 브랜치에 아직 커밋이 없어요.` : '아직 커밋이 없는 저장소예요. 첫 커밋을 올린 뒤 새로고침해주세요.'}</p>
++    </div> : loading && !recent.length ? <p className={styles.empty} role="status">GitHub 기록을 불러오는 중이에요…</p>
++      : !recent.length ? <p className={styles.empty} role="status">{selectedBranch ? `${selectedBranch} 브랜치에 아직 커밋이 없어요.` : '저장된 GitHub 변경사항이 없어요. 새로고침을 눌러 커밋을 가져오세요.'}</p>
+         : <>
+@@ -86,6 +60,6 @@ function ConnectedActivity({ url, onRefresh }: { url: string; onRefresh?: () =>
+             <table className={styles.table}>
+-              <caption className={ui.visuallyHidden}>{selectedBranch} 브랜치의 최근 커밋 5개</caption>
+-              <colgroup><col className={styles.narrowColumn} /><col className={styles.messageColumn} /><col className={styles.narrowColumn} /><col className={styles.narrowColumn} /><col /></colgroup>
+-              <thead><tr><th scope="col">커밋 기록</th><th scope="col">커밋 메시지</th><th scope="col">날짜</th><th scope="col">변경사항</th><th scope="col">커밋 유형</th></tr></thead>
+-              <tbody>{current.data.map(commit => <tr key={commit.sha}>
++              <caption className={ui.visuallyHidden}>{selectedBranch || '전체'} 최근 커밋 5개</caption>
++              <colgroup><col className={styles.narrowColumn} /><col className={styles.messageColumn} /><col className={styles.narrowColumn} /><col /></colgroup>
++              <thead><tr><th scope="col">커밋 기록</th><th scope="col">커밋 메시지</th><th scope="col">날짜</th><th scope="col">브랜치</th></tr></thead>
++              <tbody>{recent.map(commit => <tr key={commit.sha}>
+                 <td><a className={styles.commitLink} href={`${repositoryUrl}/commit/${encodeURIComponent(commit.sha)}`} target="_blank" rel="noreferrer">{commit.sha.slice(0, 7)}</a></td>
+@@ -93,4 +67,3 @@ function ConnectedActivity({ url, onRefresh }: { url: string; onRefresh?: () =>
+                 <td>{commit.date ? <time dateTime={commit.date} title={new Date(commit.date).toLocaleString('ko-KR')}>{new Date(commit.date).toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' })}</time> : '—'}</td>
+-                <td>{commit.additions !== null && commit.deletions !== null ? <><span className={styles.additions}>+{commit.additions}</span>{' '}<span className={styles.deletions}>-{commit.deletions}</span></> : <span title="변경 줄 수를 불러오지 못했어요">—</span>}</td>
+-                <td><Badge>{commit.merged ? '머지 커밋' : '커밋'}</Badge></td>
++                <td>{commit.branch ?? '—'}</td>
+               </tr>)}</tbody>
+@@ -98,3 +71,2 @@ function ConnectedActivity({ url, onRefresh }: { url: string; onRefresh?: () =>
+           </div>
+-          {current.data.some(commit => commit.additions === null) && <p className={styles.githubNote}>일부 커밋의 변경 줄 수를 불러오지 못했어요. 커밋 링크에서 자세히 확인할 수 있어요.</p>}
+         </>}
+diff --git a/src/pages/DashboardPage.tsx b/src/pages/DashboardPage.tsx
+index 2de3003..73164e8 100644
+--- a/src/pages/DashboardPage.tsx
++++ b/src/pages/DashboardPage.tsx
+@@ -17,3 +17,3 @@ export function DashboardPage() {
+   useDocumentTitle('대시보드');
+-  const { activeProject: project, activityStates, refreshActivities, figma } = useProjects();
++  const { activeProject: project, activityStates, refreshActivities, githubCommits, figma } = useProjects();
+   const { reload: reloadFigma } = figma;
+@@ -54,5 +54,5 @@ export function DashboardPage() {
+                     )}
+-                    {service === 'Notion' && project.urls?.Notion && (
++                    {service !== 'Figma' && project.urls?.[service] && (
+                       <button type="button" className={styles.statButton} disabled={state.status === 'loading'}
+-                        onClick={() => refreshActivities(service)} aria-label={state.status === 'ready' ? 'Notion 새로고침' : undefined}>
++                        onClick={() => refreshActivities(service)} aria-label={state.status === 'ready' ? service + ' 새로고침' : undefined}>
+                         {state.status === 'loading' ? '수집 중…' : state.status === 'error' ? '다시 시도' : '새로고침'}
+@@ -60,5 +60,2 @@ export function DashboardPage() {
+                     )}
+-                    {state.status === 'error' && service === 'GitHub' && (
+-                      <button type="button" className={styles.statButton} onClick={() => refreshActivities(service)}>다시 시도</button>
+-                    )}
+                   </div>
+@@ -107,3 +104,3 @@ export function DashboardPage() {
+       <div className={styles.bottomRow}>
+-        <GitHubActivity onRefresh={() => refreshActivities('GitHub')} key={project.id} url={project.urls?.GitHub ?? ''} />
++        <GitHubActivity state={activityStates.GitHub} commits={githubCommits} onRefresh={() => refreshActivities('GitHub')} key={project.id} url={project.urls?.GitHub ?? ''} />
+       </div>
+diff --git a/src/state/ProjectsContext.tsx b/src/state/ProjectsContext.tsx
+index 97bf3bc..9d1569d 100644
+--- a/src/state/ProjectsContext.tsx
++++ b/src/state/ProjectsContext.tsx
+@@ -3,5 +3,5 @@ import { createAnalysis, type Analysis, type AnalysisMode, type Project, type Se
+ import * as projectApi from '../api/projects';
+-import { activityLoaders } from '../api/activities';
++import { useGithubActivities } from './useGithubActivities';
++import { syncNotionActivities } from '../api/externalActivities';
+ import { replaceServiceChanges, type ActivityState } from '../data/activity';
+-import { services } from '../data/projects';
+ 
+@@ -91,39 +91,31 @@ function useProjectsState() {
+   const figma = useFigmaActivities(user.id, activeProject, setProjects);
+-  type OtherService = Exclude<Service, 'Figma'>;
+-  const [activityAttempt, setActivityAttempt] = useState<Record<OtherService, number>>({ GitHub: 0, Notion: 0 });
+-  const [activityResults, setActivityResults] = useState<Record<string, ActivityState>>({});
+-  const activityKey = JSON.stringify([activeProjectId, ...services.map(service => activeProject?.urls?.[service] ?? '')]);
+-  const getActivityState = (service: OtherService): ActivityState => !activeProject?.urls?.[service]
+-    ? { status: 'disconnected' } : activityResults[activityKey + service] ?? { status: 'loading' };
+-  const activityStates = { GitHub: getActivityState('GitHub'), Figma: figma.listState, Notion: getActivityState('Notion') };
+-  function refreshActivities(service: OtherService) {
+-    setActivityAttempt(value => ({ ...value, [service]: value[service] + 1 }));
++  const github = useGithubActivities(activeProject, setProjects);
++  const githubSync = github.state;
++  const refreshGithubChanges = github.refresh;
++  const notionUrl = activeProject?.urls?.Notion;
++  const notionKey = JSON.stringify([activeProjectId, notionUrl]);
++  const [notionAttempt, setNotionAttempt] = useState(0);
++  const [notion, setNotion] = useState<{ key: string; state: ActivityState }>();
++  const notionState: ActivityState = !notionUrl ? { status: 'disconnected' } :
++    notion?.key === notionKey ? notion.state : { status: 'loading' };
++  const activityStates = { GitHub: github.state, Figma: figma.listState, Notion: notionState };
++  function refreshActivities(service: Exclude<Service, 'Figma'>) {
++    if (service === 'GitHub') github.refresh();
++    else setNotionAttempt(value => value + 1);
+   }
+-  const githubSync = activityStates.GitHub;
+-  const refreshGithubChanges = () => refreshActivities('GitHub');
+-
+-  function loadActivity(service: OtherService) {
+-    if (!activeProjectId) return;
++  useEffect(() => {
++    if (!activeProjectId || !notionUrl) return;
+     const controller = new AbortController();
+-    const [projectId, ...urls] = JSON.parse(activityKey) as string[];
+-    const index = services.indexOf(service);
+-      const loader = activityLoaders[service];
+-      const url = urls[index];
+-      if (!url || !loader) return;
+-      const key = activityKey + service;
+-      setActivityResults(current => ({ ...current, [key]: { status: 'loading' } }));
+-      Promise.resolve().then(() => loader({ projectId, service, url, signal: controller.signal })).then(incoming => {
+-        if (controller.signal.aborted) return;
+-        setProjects(current => current.map(project => project.id === projectId && project.urls?.[service] === url
+-          ? replaceServiceChanges(project, service, incoming) : project));
+-        setActivityResults(current => ({ ...current, [key]: { status: 'ready' } }));
+-      }).catch(error => {
+-        if (!controller.signal.aborted) setActivityResults(current => ({ ...current, [key]: {
+-          status: 'error', error: error instanceof Error ? error.message : service + ' 변경사항을 불러오지 못했어요.',
+-        } }));
+-      });
++    setNotion({ key: notionKey, state: { status: 'loading' } });
++    syncNotionActivities({ projectId: activeProjectId, signal: controller.signal }).then(changes => {
++      if (controller.signal.aborted) return;
++      setProjects(items => items.map(item => item.id === activeProjectId && item.urls?.Notion === notionUrl
++        ? replaceServiceChanges(item, 'Notion', changes) : item));
++      setNotion({ key: notionKey, state: { status: 'ready' } });
++    }).catch(error => {
++      if (!controller.signal.aborted) setNotion({ key: notionKey, state: { status: 'error',
++        error: error instanceof Error ? error.message : 'Notion 변경사항을 불러오지 못했어요.' } });
++    });
+     return () => controller.abort();
+-  }
+-  useEffect(() => loadActivity('GitHub'), [activityKey, activityAttempt.GitHub]);
+-  useEffect(() => loadActivity('Notion'), [activityKey, activityAttempt.Notion]);
++  }, [activeProjectId, notionUrl, notionKey, notionAttempt]);
+ 
+@@ -288,3 +280,3 @@ function useProjectsState() {
+     activeProject,
+-    githubSync, refreshGithubChanges, activityStates, refreshActivities, figma,
++    githubCommits: github.commits, githubSync, refreshGithubChanges, activityStates, refreshActivities, figma,
+     selectProject,
+diff --git a/src/state/useGithubActivities.ts b/src/state/useGithubActivities.ts
+new file mode 100644
+index 0000000..d29a040
+--- /dev/null
++++ b/src/state/useGithubActivities.ts
+@@ -0,0 +1,38 @@
++import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
++import { readGithubActivities, syncGithubActivities, type StoredCommit } from '../api/activities';
++import { replaceServiceChanges, type ActivityState } from '../data/activity';
++import type { Project } from '../data/projects';
++
++export function useGithubActivities(project: Project | undefined, setProjects: Dispatch<SetStateAction<Project[]>>) {
++  const id = project?.id;
++  const url = project?.urls?.GitHub;
++  const key = JSON.stringify([id, url]);
++  const running = useRef<AbortController | null>(null);
++  const [result, setResult] = useState<{ key: string; state: ActivityState; commits: StoredCommit[] }>();
++  const load = useCallback(async (sync: boolean) => {
++    if (!id || !url || running.current) return;
++    const controller = new AbortController();
++    running.current = controller;
++    setResult(last => ({ key, commits: last?.key === key ? last.commits : [], state: { status: 'loading' } }));
++    try {
++      if (sync) await syncGithubActivities(id, controller.signal);
++      const { commits, changes } = await readGithubActivities(id, url, controller.signal);
++      if (controller.signal.aborted) return;
++      setProjects(items => items.map(item => item.id === id && item.urls?.GitHub === url
++        ? replaceServiceChanges(item, 'GitHub', changes) : item));
++      setResult({ key, commits, state: { status: 'ready' } });
++    } catch (error) {
++      if (!controller.signal.aborted) setResult(last => ({ key, commits: last?.key === key ? last.commits : [],
++        state: { status: 'error', error: error instanceof Error ? error.message : 'GitHub 기록을 불러오지 못했어요.' } }));
++    } finally {
++      if (running.current === controller) running.current = null;
++    }
++  }, [id, url, key, setProjects]);
++  useEffect(() => {
++    void load(false);
++    return () => { running.current?.abort(); running.current = null; };
++  }, [load]);
++  const state: ActivityState = !url ? { status: 'disconnected' } :
++    result?.key === key ? result.state : { status: 'loading' };
++  return { state, commits: result?.key === key ? result.commits : [], refresh: () => void load(true) };
++}
+diff --git a/tests/dashboard-github.test.mjs b/tests/dashboard-github.test.mjs
+new file mode 100644
+index 0000000..6631918
+--- /dev/null
++++ b/tests/dashboard-github.test.mjs
+@@ -0,0 +1,45 @@
++import assert from 'node:assert/strict';
++import test from 'node:test';
++import { readFile } from 'node:fs/promises';
++import ts from 'typescript';
++
++const read = path => readFile(new URL(path, import.meta.url), 'utf8');
++const moduleUrl = source => 'data:text/javascript;base64,' + Buffer.from(ts.transpileModule(source, {
++  compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
++}).outputText).toString('base64');
++const source = (await read('../src/api/activities.ts'))
++  .replace("'./projects'", JSON.stringify(moduleUrl('export const projectRequest = (...args) => globalThis.dashboardRequest(...args)')))
++  .replace("'../data/github'", JSON.stringify(moduleUrl(await read('../src/data/github.ts'))))
++  .replace("'../data/githubChanges'", JSON.stringify(moduleUrl(await read('../src/data/githubChanges.ts'))));
++const { readGithubActivities, syncGithubActivities } = await import(moduleUrl(source));
++
++test('dashboard reads only stored activities and keeps organized commits out of the pending count', async t => {
++  t.after(() => { delete globalThis.dashboardRequest; });
++  globalThis.dashboardRequest = async (path, options) => {
++    assert.equal(options.method ?? 'GET', 'GET');
++    assert.equal(path, '/api/projects/7/activities?source=github&limit=100&offset=0');
++    const row = { project_id: 7, source: 'github', occurred_at: '2026-11-20T10:00:00', title: 'update',
++      story_id: null, branch_name: 'main', external_id: 'team/repo:abc1234' };
++    return [row, { ...row, external_id: 'team/repo:abcdef1', story_id: 8 }, { ...row, external_id: 'old/repo:abc1234' }];
++  };
++  const { changes, commits } = await readGithubActivities('7', 'https://github.com/team/repo', new AbortController().signal);
++  assert.equal(commits.length, 2);
++  assert.equal(changes.length, 1);
++  assert.equal(changes[0].id, 'github:team/repo:abc1234');
++});
++
++test('manual refresh imports branches and follows sync pagination using only project endpoints', async t => {
++  t.after(() => { delete globalThis.dashboardRequest; });
++  const calls = [];
++  globalThis.dashboardRequest = async (path, options) => {
++    calls.push([options.method ?? 'GET', path]);
++    if (path.includes('/branches?')) return { items: [{ name: 'feat/ui' }], has_next: false };
++    return { has_next: new URL(path, 'https://test.invalid').searchParams.get('page') === '1' };
++  };
++  await syncGithubActivities('7', new AbortController().signal);
++  assert.deepEqual(calls, [
++    ['GET', '/api/projects/7/github/branches?page=1&per_page=100'],
++    ['POST', '/api/projects/7/github/sync?branch=feat%2Fui&page=1&per_page=100'],
++    ['POST', '/api/projects/7/github/sync?branch=feat%2Fui&page=2&per_page=100'],
++  ]);
++});
+diff --git a/tests/github-api.test.mjs b/tests/github-api.test.mjs
+index b22c6c4..33ce49d 100644
+--- a/tests/github-api.test.mjs
++++ b/tests/github-api.test.mjs
+@@ -122,3 +122,3 @@ test('disconnected dashboard offers settings without a table, filters, or fetche
+   assert.doesNotMatch(html, /<table|브랜치 필터|새로고침/);
+-  const loading = renderToStaticMarkup(React.createElement(MemoryRouter, null, React.createElement(GitHubActivity, { url })));
++  const loading = renderToStaticMarkup(React.createElement(MemoryRouter, null, React.createElement(GitHubActivity, { url, commits: [], state: { status: 'loading' } })));
+   assert.match(loading, /GitHub 기록을 불러오는 중/);

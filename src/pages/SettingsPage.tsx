@@ -1,7 +1,8 @@
-import { useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { Navigate, useNavigate } from 'react-router';
 import errorIcon from '../../assets/icons/error.svg';
 import type { Project, Service } from '../data/projects';
+import { getConnections, type Connection } from '../api/projects';
 import { githubRepository } from '../data/github';
 import { useProjects } from '../state/ProjectsContext';
 import { ConfirmDialog } from '../components/ConfirmDialog';
@@ -195,15 +196,38 @@ function ProjectInfo({ project }: { project: Project }) {
   );
 }
 
-const urlFields = { GitHub: 'github_url', Figma: 'figma_url', Notion: 'notion_url' } as const;
+const connectionLabels: Record<Connection['connection_status'], string> = {
+  not_linked: '미연결', invalid_url: 'URL 확인 필요', configuration_required: '설정 필요',
+  configured: '설정됨', public_access_unverified: '접근 미확인',
+};
 
 function Connections({ project }: { project: Project }) {
-  const { updateProject } = useProjects();
+  const { saveConnection } = useProjects();
   const [draft, setDraft] = useState(project.urls ?? { GitHub: '', Figma: '', Notion: '' });
   const [pending, setPending] = useState<Service | null>(null);
   const busy = useRef(false);
   const [error, setError] = useState('');
   const [message, announce] = useAnnouncement();
+
+  const [connections, setConnections] = useState<Connection[] | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  const [loadFailed, setLoadFailed] = useState(false);
+  useEffect(() => {
+    const controller = new AbortController();
+    setError('');
+    setLoadFailed(false);
+    getConnections(project.id, controller.signal).then(({ connections }) => {
+      if (controller.signal.aborted) return;
+      const url = (source: Connection['source']) => connections.find(item => item.source === source)?.external_url ?? '';
+      setConnections(connections);
+      setDraft({ GitHub: url('github'), Figma: url('figma'), Notion: url('notion') });
+    }).catch(cause => {
+      if (controller.signal.aborted) return;
+      setError(cause instanceof Error ? cause.message : '연결 정보를 불러오지 못했어요.');
+      setLoadFailed(true);
+    });
+    return () => controller.abort();
+  }, [project.id, attempt]);
 
   async function save(service: Service, disconnect = false) {
     if (busy.current) return;
@@ -223,8 +247,10 @@ function Connections({ project }: { project: Project }) {
     setPending(service);
     setError('');
     try {
-      await updateProject({ [urlFields[service]]: value || null });
-      setDraft(current => ({ ...current, [service]: value }));
+      const updated = await saveConnection(service, value || null);
+      setConnections(updated);
+      const url = updated.find(item => item.source === service.toLowerCase())?.external_url ?? '';
+      setDraft(current => ({ ...current, [service]: url }));
       announce(service + (disconnect ? ' URL을 해제했어요.' : ' URL을 저장했어요.'));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : '저장하지 못했습니다.');
@@ -235,20 +261,24 @@ function Connections({ project }: { project: Project }) {
     <SectionHeader id="tools-heading" title="연동 서비스" description="프로젝트에서 사용할 작업 도구의 URL을 관리합니다." />
     <StatusText message={message} />
     {error && <p className={form.error} role="alert">{error}</p>}
-    <fieldset className={styles.fieldset} disabled={pending !== null} aria-busy={pending !== null}>
+    {loadFailed && <button onClick={() => setAttempt(value => value + 1)}>다시 시도</button>}
+    {!connections && !loadFailed && <p role="status">연결 정보를 불러오는 중이에요…</p>}
+    <fieldset className={styles.fieldset} disabled={!connections || pending !== null} aria-busy={pending !== null}>
       <ul className={styles.services}>
-        {settingServices.map(service => <li key={service} className={styles.service}>
+        {settingServices.map(service => {
+          const connection = connections?.find(item => item.source === service.toLowerCase());
+          return <li key={service} className={styles.service}>
           <div className={styles.serviceInfo}>
-            <div className={styles.serviceHeading}><label htmlFor={'settings-url-' + service} className={styles.serviceName}><ServiceIcon service={service} />{service}</label><span className={styles.connectionBadge}>{project.urls?.[service] ? 'URL 저장됨' : '미연결'}</span></div>
+            <div className={styles.serviceHeading}><label htmlFor={'settings-url-' + service} className={styles.serviceName}><ServiceIcon service={service} />{service}</label><span className={styles.connectionBadge}>{connection ? connectionLabels[connection.connection_status] : '—'}</span></div>
             <input id={'settings-url-' + service} type="url" inputMode="url" autoComplete="off" spellCheck={false}
               className={form.input} placeholder={service + ' URL 입력'} value={draft[service]}
               onChange={event => { setDraft(current => ({ ...current, [service]: event.target.value })); setError(''); }} />
           </div>
           <div className={styles.serviceActions}>
             <button type="button" className={`${styles.smallButton} ${styles.emphasis}`} onClick={() => void save(service)}>{pending === service ? '저장 중…' : '저장'}</button>
-            {project.urls?.[service] && <button type="button" className={`${styles.smallButton} ${styles.disconnect}`} onClick={() => void save(service, true)}>연결 해제</button>}
+            {connection?.external_url && <button type="button" className={`${styles.smallButton} ${styles.disconnect}`} onClick={() => void save(service, true)}>연결 해제</button>}
           </div>
-        </li>)}
+        </li>; })}
       </ul>
     </fieldset>
   </section>;

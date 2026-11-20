@@ -16,7 +16,7 @@ const retryTime = new Intl.DateTimeFormat('ko-KR', {
 
 export function DashboardPage() {
   useDocumentTitle('대시보드');
-  const { activeProject: project, storyListState, activityStates, refreshActivities, figma } = useProjects();
+  const { activeProject: project, storyListState, githubCommits, activityStates, refreshActivities, figma } = useProjects();
   const { reload: reloadFigma } = figma;
   useEffect(() => reloadFigma(), [reloadFigma]);
   if (!project) return <Navigate to="/projects" replace />;
@@ -107,7 +107,7 @@ export function DashboardPage() {
       </div>
 
       <div className={styles.bottomRow}>
-        <GitHubActivity onRefresh={() => refreshActivities('GitHub')} key={project.id} url={project.urls?.GitHub ?? ''} />
+        <GitHubActivity state={activityStates.GitHub} commits={githubCommits} onRefresh={() => refreshActivities('GitHub')} key={project.id} url={project.urls?.GitHub ?? ''} />
       </div>
     </div>
   );

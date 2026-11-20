@@ -38,17 +38,20 @@ function validateStory(value: unknown, projectId?: string, storyId?: string): St
 export function toStory(row: StoryResponse, links: LinkedActivity[] = []): Story {
   const analysis = objectValue(row.ai_analysis);
   const editor = objectValue(analysis.moeum_editor);
+  const legacyIds = Array.isArray(analysis.sourceChangeIds)
+    ? analysis.sourceChangeIds.filter((value): value is string => typeof value === 'string') : [];
+  const legacySources = Object.entries(serviceNames).filter(([source]) => legacyIds.some(id => id.startsWith(source + ':'))).map(([, service]) => service);
   const attached = links.filter(link => link.story_id === row.id && link.project_id === row.project_id);
   return {
     ...emptyStoryFields, id: String(row.id), projectId: String(row.project_id), title: row.title,
     why: text(row.why), problem: text(row.problem), solution: text(row.solution), result: text(row.result),
-    learned: text(row.learned), next: text(row.next_steps), memo: text(editor.memo),
+    learned: text(row.learned), next: text(row.next_steps), memo: text(editor.memo ?? (Array.isArray(analysis.sourceChangeIds) ? row.content : '')),
     summary: text(analysis.summary), before: text(analysis.before), after: text(analysis.after),
     tags: Array.isArray(analysis.tags) ? analysis.tags.filter((tag): tag is string => typeof tag === 'string') : [],
     rawAnalysis: analysis, updatedAt: row.updated_at,
     status: row.story_status === 'published' ? '완료' : '초안', date: row.created_at.slice(0, 10).replaceAll('-', '.'),
-    sources: [...new Set(attached.map(link => serviceNames[link.source]))],
-    sourceChangeIds: attached.map(link => `${link.source}:${link.activity_id}`),
+    sources: [...new Set([...legacySources, ...attached.map(link => serviceNames[link.source])])],
+    sourceChangeIds: [...new Set([...legacyIds, ...attached.map(link => `${link.source}:${link.activity_id}`)])],
   };
 }
 

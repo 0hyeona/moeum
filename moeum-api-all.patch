@@ -1,0 +1,611 @@
+diff --git a/src/api/projects.ts b/src/api/projects.ts
+index 4df8b2a..ef0c085 100644
+--- a/src/api/projects.ts
++++ b/src/api/projects.ts
+@@ -13,7 +13,7 @@ export type ProjectInput = {
+   github_url?: string | null; figma_url?: string | null; notion_url?: string | null;
+ };
+ 
+-function request<T>(path: string, options: RequestInit = {}) {
++export function projectRequest<T>(path: string, options: RequestInit = {}) {
+   const token = getAccessToken();
+   if (!token) return Promise.reject(new Error('로그인이 필요합니다.'));
+   return apiRequest<T>(path, { ...options, headers: { Authorization: `Bearer ${token}` } });
+@@ -22,29 +22,51 @@ function request<T>(path: string, options: RequestInit = {}) {
+ export async function listProjects(signal?: AbortSignal) {
+   const projects: ProjectResponse[] = [];
+   for (let offset = 0; ; offset += 100) {
+-    const page = await request<ProjectResponse[]>(`/projects?limit=100&offset=${offset}&project_status=all`, { signal });
++    const page = await projectRequest<ProjectResponse[]>(`/projects?limit=100&offset=${offset}&project_status=all`, { signal });
+     projects.push(...page);
+     if (page.length < 100) return projects;
+   }
+ }
+-export const getProject = (id: string, signal?: AbortSignal) => request<ProjectResponse>(`/projects/${encodeURIComponent(id)}`, { signal });
+-export const createProject = (input: ProjectInput) => request<ProjectResponse>('/projects', { method: 'POST', body: JSON.stringify(input) });
+-export const updateProject = (id: string, input: Partial<ProjectInput>) => request<ProjectResponse>(`/projects/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(input) });
+-export const deleteProject = (id: string) => request<void>(`/projects/${encodeURIComponent(id)}`, { method: 'DELETE' });
++export const getProject = (id: string, signal?: AbortSignal) => projectRequest<ProjectResponse>(`/projects/${encodeURIComponent(id)}`, { signal });
++export const createProject = (input: ProjectInput) => projectRequest<ProjectResponse>('/projects', { method: 'POST', body: JSON.stringify(input) });
++export const updateProject = (id: string, input: Partial<ProjectInput>) => projectRequest<ProjectResponse>(`/projects/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(input) });
++export const deleteProject = (id: string) => projectRequest<void>(`/projects/${encodeURIComponent(id)}`, { method: 'DELETE' });
+ 
+ export function toProject(data: ProjectResponse, previous?: Project): Project {
+   const urls = { GitHub: data.github_url ?? '', Figma: data.figma_url ?? '', Notion: data.notion_url ?? '' };
++  return {
++    id: String(data.id), name: data.project_name, description: data.description ?? '',
++    status: data.project_status === 'archived' ? '보관됨' : '진행 중',
++    updatedAt: data.updated_at.slice(0, 10).replaceAll('-', '.'),
++    ...projectLinks(urls, previous), stories: previous?.stories ?? [], commits: previous?.commits ?? [],
++  };
++}
++
++export function projectLinks(urls: Record<Service, string>, previous?: Project) {
+   const repository = githubRepository(urls.GitHub);
+   const sameSource = (service: Service) => service === 'GitHub'
+     ? githubRepository(previous?.urls?.GitHub ?? '') === repository
+     : (previous?.urls?.[service] ?? '') === urls[service];
+   const state = (service: Service): ServiceState => ({ status: urls[service] ? 'connected' : 'disconnected' });
+   return {
+-    id: String(data.id), name: data.project_name, description: data.description ?? '',
+-    status: data.project_status === 'archived' ? '보관됨' : '진행 중',
+-    updatedAt: data.updated_at.slice(0, 10).replaceAll('-', '.'), urls,
++    urls,
+     services: { GitHub: state('GitHub'), Figma: state('Figma'), Notion: state('Notion') },
+     repositories: repository ? [repository] : [], selectedRepository: repository,
+-    changes: previous?.changes.filter(change => sameSource(change.service)) ?? [], stories: previous?.stories ?? [], commits: previous?.commits ?? [],
++    changes: previous?.changes.filter(change => sameSource(change.service)) ?? [],
+   };
+ }
++
++export type Connection = {
++  source: 'github' | 'figma' | 'notion';
++  external_url: string | null;
++  connection_status: 'not_linked' | 'invalid_url' | 'configuration_required' | 'configured' | 'public_access_unverified';
++  detail: string;
++};
++type Connections = { connections: Connection[] };
++const connectionsPath = (id: string) => '/api/projects/' + encodeURIComponent(id) + '/connections';
++export const getConnections = (id: string, signal: AbortSignal) =>
++  projectRequest<Connections>(connectionsPath(id), { signal });
++export const saveConnection = (id: string, service: Service, url: string | null) =>
++  projectRequest<Connections>(connectionsPath(id) + '/' + service.toLowerCase(), {
++    method: 'PATCH', body: JSON.stringify({ external_url: url }),
++  });
+diff --git a/src/api/timeline.ts b/src/api/timeline.ts
+new file mode 100644
+index 0000000..5e22951
+--- /dev/null
++++ b/src/api/timeline.ts
+@@ -0,0 +1,83 @@
++import { projectRequest } from './projects';
++import { services, type Service, type Story, type StoryFields } from '../data/projects';
++
++type StoryRow = {
++  id: number; title: string; created_at: string; story_status: 'draft' | 'published';
++  content: string; why?: string; problem?: string; solution?: string; result?: string;
++  learned?: string; next_steps?: string; ai_analysis?: unknown;
++};
++type Activity = { story_id: number | null; source: string };
++
++async function pages<T>(path: string, signal: AbortSignal, filters = '') {
++  const rows: T[] = [];
++  for (let offset = 0; ; offset += 100) {
++    const page = await projectRequest<T[]>(path + '?limit=100&offset=' + offset + filters, { signal });
++    rows.push(...page);
++    if (page.length < 100) return rows;
++  }
++}
++
++export async function loadTimeline(id: string, signal: AbortSignal): Promise<Story[]> {
++  const path = '/api/projects/' + encodeURIComponent(id);
++  const rows = await pages<StoryRow>(path + '/stories', signal);
++  if (!rows.length) return [];
++  const activities = await pages<Activity>(path + '/activities', signal, '&unorganized=false');
++  const sources = new Map<number, Set<Service>>();
++  for (const activity of activities) {
++    const service = services.find(item => item.toLowerCase() === activity.source);
++    if (activity.story_id == null || !service) continue;
++    const linked = sources.get(activity.story_id) ?? new Set<Service>();
++    linked.add(service);
++    sources.set(activity.story_id, linked);
++  }
++  return rows.map(row => toStory(row, sources.get(row.id)));
++}
++
++function toStory(row: StoryRow, linkedSources?: Set<Service>): Story {
++  const ai = row.ai_analysis && typeof row.ai_analysis === 'object' && !Array.isArray(row.ai_analysis)
++    ? row.ai_analysis as Record<string, unknown> : {};
++  const sourceChangeIds = Array.isArray(ai.sourceChangeIds)
++    ? ai.sourceChangeIds.filter((id): id is string => typeof id === 'string') : [];
++  const sources = new Set(linkedSources);
++  for (const service of services) {
++    if (sourceChangeIds.some(id => id.startsWith(service.toLowerCase() + ':'))) sources.add(service);
++  }
++  return {
++    id: String(row.id), title: row.title, date: row.created_at.slice(0, 10).replaceAll('-', '.'),
++    status: row.story_status === 'published' ? '완료' : '초안', sources: [...sources], sourceChangeIds,
++    why: row.why ?? '', problem: row.problem ?? '', solution: row.solution ?? '', result: row.result ?? '',
++    learned: row.learned ?? '', next: row.next_steps ?? '', memo: row.content,
++    tags: Array.isArray(ai.tags) ? ai.tags.filter((tag): tag is string => typeof tag === 'string') : [],
++    summary: typeof ai.summary === 'string' ? ai.summary : '',
++    before: typeof ai.before === 'string' ? ai.before : '', after: typeof ai.after === 'string' ? ai.after : '',
++    analysisData: ai,
++  };
++}
++
++function storyPayload(fields: StoryFields, metadata?: Record<string, unknown>) {
++  const { title, why, problem, solution, result, learned, next, memo, tags, summary, before, after } = fields;
++  return {
++    title, why, problem, solution, result, learned, next_steps: next, content: memo, story_status: 'published',
++    ai_analysis: { ...metadata, tags, summary, before, after },
++  };
++}
++
++export async function createStoredStory(projectId: string, fields: StoryFields, sourceChangeIds: string[]) {
++  // GitHub changes use repository + SHA. Only Figma and Notion changes carry database activity IDs.
++  const activityIds = sourceChangeIds.flatMap(id => {
++    const match = /^(?:figma|notion):([1-9]\d*)$/.exec(id);
++    return match ? [Number(match[1])] : [];
++  });
++  const row = await projectRequest<StoryRow>('/stories', {
++    method: 'POST',
++    body: JSON.stringify({ ...storyPayload(fields, { sourceChangeIds }),
++      project_id: Number(projectId), activity_ids: activityIds }),
++  });
++  return toStory(row);
++}
++
++export function updateStoredStory(story: Story, fields: StoryFields) {
++  return projectRequest('/stories/' + encodeURIComponent(story.id), {
++    method: 'PATCH', body: JSON.stringify(storyPayload(fields, story.analysisData)),
++  });
++}
+diff --git a/src/data/projects.ts b/src/data/projects.ts
+index cfe87fa..a9df8de 100644
+--- a/src/data/projects.ts
++++ b/src/data/projects.ts
+@@ -44,6 +44,7 @@ export type StoryFields = {
+ };
+ 
+ export type Story = StoryFields & {
++  analysisData?: Record<string, unknown>;
+   sourceChangeIds?: string[];
+   id: string;
+   status: StoryStatus;
+diff --git a/src/pages/SettingsPage.tsx b/src/pages/SettingsPage.tsx
+index be80464..d49fa26 100644
+--- a/src/pages/SettingsPage.tsx
++++ b/src/pages/SettingsPage.tsx
+@@ -1,7 +1,8 @@
+-import { useRef, useState, type KeyboardEvent } from 'react';
++import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+ import { Navigate, useNavigate } from 'react-router';
+ import errorIcon from '../../assets/icons/error.svg';
+ import type { Project, Service } from '../data/projects';
++import { getConnections, type Connection } from '../api/projects';
+ import { githubRepository } from '../data/github';
+ import { useProjects } from '../state/ProjectsContext';
+ import { ConfirmDialog } from '../components/ConfirmDialog';
+@@ -195,16 +196,39 @@ function ProjectInfo({ project }: { project: Project }) {
+   );
+ }
+ 
+-const urlFields = { GitHub: 'github_url', Figma: 'figma_url', Notion: 'notion_url' } as const;
++const connectionLabels: Record<Connection['connection_status'], string> = {
++  not_linked: '미연결', invalid_url: 'URL 확인 필요', configuration_required: '설정 필요',
++  configured: '설정됨', public_access_unverified: '접근 미확인',
++};
+ 
+ function Connections({ project }: { project: Project }) {
+-  const { updateProject } = useProjects();
++  const { saveConnection } = useProjects();
+   const [draft, setDraft] = useState(project.urls ?? { GitHub: '', Figma: '', Notion: '' });
+   const [pending, setPending] = useState<Service | null>(null);
+   const busy = useRef(false);
+   const [error, setError] = useState('');
+   const [message, announce] = useAnnouncement();
+ 
++  const [connections, setConnections] = useState<Connection[] | null>(null);
++  const [attempt, setAttempt] = useState(0);
++  const [loadFailed, setLoadFailed] = useState(false);
++  useEffect(() => {
++    const controller = new AbortController();
++    setError('');
++    setLoadFailed(false);
++    getConnections(project.id, controller.signal).then(({ connections }) => {
++      if (controller.signal.aborted) return;
++      const url = (source: Connection['source']) => connections.find(item => item.source === source)?.external_url ?? '';
++      setConnections(connections);
++      setDraft({ GitHub: url('github'), Figma: url('figma'), Notion: url('notion') });
++    }).catch(cause => {
++      if (controller.signal.aborted) return;
++      setError(cause instanceof Error ? cause.message : '연결 정보를 불러오지 못했어요.');
++      setLoadFailed(true);
++    });
++    return () => controller.abort();
++  }, [project.id, attempt]);
++
+   async function save(service: Service, disconnect = false) {
+     if (busy.current) return;
+     const value = disconnect ? '' : draft[service].trim();
+@@ -223,8 +247,10 @@ function Connections({ project }: { project: Project }) {
+     setPending(service);
+     setError('');
+     try {
+-      await updateProject({ [urlFields[service]]: value || null });
+-      setDraft(current => ({ ...current, [service]: value }));
++      const updated = await saveConnection(service, value || null);
++      setConnections(updated);
++      const url = updated.find(item => item.source === service.toLowerCase())?.external_url ?? '';
++      setDraft(current => ({ ...current, [service]: url }));
+       announce(service + (disconnect ? ' URL을 해제했어요.' : ' URL을 저장했어요.'));
+     } catch (cause) {
+       setError(cause instanceof Error ? cause.message : '저장하지 못했습니다.');
+@@ -235,20 +261,24 @@ function Connections({ project }: { project: Project }) {
+     <SectionHeader id="tools-heading" title="연동 서비스" description="프로젝트에서 사용할 작업 도구의 URL을 관리합니다." />
+     <StatusText message={message} />
+     {error && <p className={form.error} role="alert">{error}</p>}
+-    <fieldset className={styles.fieldset} disabled={pending !== null} aria-busy={pending !== null}>
++    {loadFailed && <button onClick={() => setAttempt(value => value + 1)}>다시 시도</button>}
++    {!connections && !loadFailed && <p role="status">연결 정보를 불러오는 중이에요…</p>}
++    <fieldset className={styles.fieldset} disabled={!connections || pending !== null} aria-busy={pending !== null}>
+       <ul className={styles.services}>
+-        {settingServices.map(service => <li key={service} className={styles.service}>
++        {settingServices.map(service => {
++          const connection = connections?.find(item => item.source === service.toLowerCase());
++          return <li key={service} className={styles.service}>
+           <div className={styles.serviceInfo}>
+-            <div className={styles.serviceHeading}><label htmlFor={'settings-url-' + service} className={styles.serviceName}><ServiceIcon service={service} />{service}</label><span className={styles.connectionBadge}>{project.urls?.[service] ? 'URL 저장됨' : '미연결'}</span></div>
++            <div className={styles.serviceHeading}><label htmlFor={'settings-url-' + service} className={styles.serviceName}><ServiceIcon service={service} />{service}</label><span className={styles.connectionBadge}>{connection ? connectionLabels[connection.connection_status] : '—'}</span></div>
+             <input id={'settings-url-' + service} type="url" inputMode="url" autoComplete="off" spellCheck={false}
+               className={form.input} placeholder={service + ' URL 입력'} value={draft[service]}
+               onChange={event => { setDraft(current => ({ ...current, [service]: event.target.value })); setError(''); }} />
+           </div>
+           <div className={styles.serviceActions}>
+             <button type="button" className={`${styles.smallButton} ${styles.emphasis}`} onClick={() => void save(service)}>{pending === service ? '저장 중…' : '저장'}</button>
+-            {project.urls?.[service] && <button type="button" className={`${styles.smallButton} ${styles.disconnect}`} onClick={() => void save(service, true)}>연결 해제</button>}
++            {connection?.external_url && <button type="button" className={`${styles.smallButton} ${styles.disconnect}`} onClick={() => void save(service, true)}>연결 해제</button>}
+           </div>
+-        </li>)}
++        </li>; })}
+       </ul>
+     </fieldset>
+   </section>;
+diff --git a/src/pages/StoryDetailPage.tsx b/src/pages/StoryDetailPage.tsx
+index 0cdde49..8d80521 100644
+--- a/src/pages/StoryDetailPage.tsx
++++ b/src/pages/StoryDetailPage.tsx
+@@ -49,14 +49,17 @@ function downloadMarkdown(story: Story) {
+ export function StoryDetailPage() {
+   useDocumentTitle('Story 기록 보기');
+   const { storyId } = useParams();
+-  const { activeProject: project, deleteStory } = useProjects();
++  const { activeProject: project, timelineLoading, timelineError, retryTimeline, deleteStory } = useProjects();
+   const { story, switching } = useStory(storyId);
+   const navigate = useNavigate();
+   const [confirmingDelete, setConfirmingDelete] = useState(false);
++  const [pending, setPending] = useState(false);
++  const [error, setError] = useState('');
+   if (!project) return <Navigate to="/projects" replace />;
+ 
+   if (!story) {
+-    if (switching) return null;
++    if (switching || timelineLoading) return <p role="status">Story를 불러오는 중이에요…</p>;
++    if (timelineError) return <><p role="alert">{timelineError}</p><button onClick={retryTimeline}>다시 시도</button></>;
+     return (
+       <div className={styles.page}>
+         <PageHeading title="Story 기록 보기" />
+@@ -68,9 +71,16 @@ export function StoryDetailPage() {
+     );
+   }
+ 
+-  const remove = () => {
+-    deleteStory(story.id);
+-    navigate('/timeline', { replace: true });
++  const remove = async () => {
++    if (pending) return;
++    setPending(true);
++    setError('');
++    try {
++      await deleteStory(story.id);
++      navigate('/timeline', { replace: true });
++    } catch (cause) {
++      setError(cause instanceof Error ? cause.message : '삭제하지 못했어요.');
++    } finally { setPending(false); }
+   };
+ 
+   return (
+@@ -129,10 +139,11 @@ export function StoryDetailPage() {
+         <ConfirmDialog
+           title="Story를 삭제할까요?"
+           description="삭제한 Story는 되돌릴 수 없어요."
++          pending={pending}
+           confirmLabel="삭제"
+           onConfirm={remove}
+           onCancel={() => setConfirmingDelete(false)}
+-        />
++        >{error && <p role="alert">{error}</p>}</ConfirmDialog>
+       )}
+     </div>
+   );
+diff --git a/src/pages/StoryWritePage.tsx b/src/pages/StoryWritePage.tsx
+index a41a7f2..fc2dacc 100644
+--- a/src/pages/StoryWritePage.tsx
++++ b/src/pages/StoryWritePage.tsx
+@@ -26,12 +26,13 @@ export function StoryWritePage() {
+   const editing = storyId !== undefined;
+   const title = editing ? 'Story 수정' : 'Story 작성';
+   useDocumentTitle(title);
+-  const { activeProject: project, analysis } = useProjects();
++  const { activeProject: project, timelineLoading, timelineError, retryTimeline, analysis } = useProjects();
+   const { story, switching } = useStory(storyId);
+   if (!project) return <Navigate to="/projects" replace />;
+ 
+   if (editing && !story) {
+-    if (switching) return null;
++    if (switching || timelineLoading) return <p role="status">Story를 불러오는 중이에요…</p>;
++    if (timelineError) return <><p role="alert">{timelineError}</p><button onClick={retryTimeline}>다시 시도</button></>;
+     return (
+       <div className={styles.page}>
+         <PageHeading title={title} />
+@@ -93,7 +94,9 @@ function StoryForm({ heading, storyId, initialFields, aiTags }: StoryFormProps)
+     updateStoryDraft({ [key]: value }, storyId);
+   }
+ 
+-  function submit(event: FormEvent<HTMLFormElement>) {
++  const [pending, setPending] = useState(false);
++  const [saveError, setSaveError] = useState('');
++  async function submit(event: FormEvent<HTMLFormElement>) {
+     event.preventDefault();
+     const title = fields.title.trim();
+     if (!title) {
+@@ -102,8 +105,15 @@ function StoryForm({ heading, storyId, initialFields, aiTags }: StoryFormProps)
+       titleInput.current?.focus();
+       return;
+     }
+-    const id = saveStory({ ...fields, title }, storyId);
+-    navigate(`/stories/${id}`, { replace: true });
++    if (pending) return;
++    setPending(true);
++    setSaveError('');
++    try {
++      const id = await saveStory({ ...fields, title }, storyId);
++      navigate(`/stories/${id}`, { replace: true });
++    } catch (cause) {
++      setSaveError(cause instanceof Error ? cause.message : '저장하지 못했어요.');
++    } finally { setPending(false); }
+   }
+ 
+   return (
+@@ -177,7 +187,8 @@ function StoryForm({ heading, storyId, initialFields, aiTags }: StoryFormProps)
+             </div>
+           </div>
+         </div>
+-        <button type="submit" className={ui.primaryButton}>{storyId ? '수정 완료' : 'Story 작성 완료'}</button>
++        {saveError && <p role="alert">{saveError}</p>}
++        <button disabled={pending} type="submit" className={ui.primaryButton}>{storyId ? '수정 완료' : 'Story 작성 완료'}</button>
+       </form>
+     </div>
+   );
+diff --git a/src/pages/TimelinePage.tsx b/src/pages/TimelinePage.tsx
+index 4847ea7..6a47d2c 100644
+--- a/src/pages/TimelinePage.tsx
++++ b/src/pages/TimelinePage.tsx
+@@ -19,12 +19,14 @@ const sourceOptions: readonly FilterOption<'all' | Service>[] = [
+ ];
+ export function TimelinePage() {
+   useDocumentTitle('타임라인');
+-  const { activeProject: project } = useProjects();
++  const { activeProject: project, timelineLoading, timelineError, retryTimeline } = useProjects();
+   const [period, setPeriod] = useState<DateRange | null>(null);
+   const [query, setQuery] = useState('');
+   const [status, setStatus] = useState<'all' | StoryStatus>('all');
+   const [source, setSource] = useState<'all' | Service>('all');
+   if (!project) return <Navigate to="/projects" replace />;
++  if (timelineLoading) return <><PageHeading title="타임라인" /><p role="status">Story를 불러오는 중이에요…</p></>;
++  if (timelineError) return <><PageHeading title="타임라인" /><p role="alert">{timelineError}</p><button onClick={retryTimeline}>다시 시도</button></>;
+   const keyword = query.trim().toLowerCase();
+   const filtered = project.stories.filter(story =>
+     (!period || (story.date >= period.start && story.date <= period.end)) &&
+diff --git a/src/state/ProjectsContext.tsx b/src/state/ProjectsContext.tsx
+index b386be4..97bf3bc 100644
+--- a/src/state/ProjectsContext.tsx
++++ b/src/state/ProjectsContext.tsx
+@@ -1,5 +1,5 @@
+ import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+-import { createAnalysis, todayLabel, type Analysis, type AnalysisMode, type Project, type Service, type Story, type StoryFields } from '../data/projects';
++import { createAnalysis, type Analysis, type AnalysisMode, type Project, type Service, type StoryFields } from '../data/projects';
+ import * as projectApi from '../api/projects';
+ import { activityLoaders } from '../api/activities';
+ import { replaceServiceChanges, type ActivityState } from '../data/activity';
+@@ -8,7 +8,8 @@ import { services } from '../data/projects';
+ import { SessionSkeleton } from '../components/Skeleton';
+ import boundaryStyles from '../components/AuthBoundary.module.css';
+ import { useAuth } from './AuthContext';
+-import { Navigate } from 'react-router';
++import { createStoredStory, loadTimeline, updateStoredStory } from '../api/timeline';
++import { Navigate, useLocation } from 'react-router';
+ import { ApiError } from '../api/client';
+ import { clearAccessToken } from '../api/auth';
+ import { useFigmaActivities } from './useFigmaActivities';
+@@ -67,6 +68,26 @@ function useProjectsState() {
+   const [analysis, setAnalysis] = useState<Analysis | null>(null);
+   const [storyDrafts, setStoryDrafts] = useState<Record<string, Record<string, Partial<StoryFields>>>>({});
+   const activeProject = projects.find((project) => project.id === activeProjectId);
++  const { pathname } = useLocation();
++  const timelineProject = pathname === '/timeline' || /^\/stories\/\d+(?:\/edit)?\/?$/.test(pathname) ? activeProjectId : null;
++  const [timelineAttempt, setTimelineAttempt] = useState(0);
++  const [timelineResult, setTimelineResult] = useState<{ id: string; error?: string } | null>(null);
++  useEffect(() => {
++    setTimelineResult(null);
++    if (!timelineProject) return;
++    const controller = new AbortController();
++    loadTimeline(timelineProject, controller.signal).then(stories => {
++      if (controller.signal.aborted) return;
++      setProjects(current => current.map(project => project.id !== timelineProject ? project : {
++        ...project, stories: [...project.stories.filter(story => !/^\d+$/.test(story.id)), ...stories],
++      }));
++      setTimelineResult({ id: timelineProject });
++    }).catch(error => {
++      if (!controller.signal.aborted) setTimelineResult({ id: timelineProject,
++        error: error instanceof Error ? error.message : '타임라인을 불러오지 못했어요.' });
++    });
++    return () => controller.abort();
++  }, [timelineProject, timelineAttempt]);
+   const figma = useFigmaActivities(user.id, activeProject, setProjects);
+   type OtherService = Exclude<Service, 'Figma'>;
+   const [activityAttempt, setActivityAttempt] = useState<Record<OtherService, number>>({ GitHub: 0, Notion: 0 });
+@@ -170,6 +191,19 @@ function useProjectsState() {
+     });
+   }
+ 
++  async function saveConnection(service: Service, url: string | null) {
++    const id = activeProjectId;
++    if (!id) throw new Error('프로젝트를 선택해주세요.');
++    return enqueue(async () => {
++      const { connections } = await projectApi.saveConnection(id, service, url);
++      const urlFor = (name: string) => connections.find(item => item.source === name)?.external_url ?? '';
++      const urls = { GitHub: urlFor('github'), Notion: urlFor('notion'), Figma: urlFor('figma') };
++      setProjects(current => current.map(project => project.id === id
++        ? { ...project, ...projectApi.projectLinks(urls, project) } : project));
++      return connections;
++    });
++  }
++
+   async function deleteProject() {
+     if (!activeProjectId) throw new Error('프로젝트를 선택해주세요.');
+     await enqueue(() => projectApi.deleteProject(activeProjectId));
+@@ -218,15 +252,17 @@ function useProjectsState() {
+   }
+ 
+   // s7 "Story 작성 완료": id가 있으면 수정, 없으면 분석 결과를 출처로 새 Story를 만듭니다. 저장한 Story의 id를 반환합니다.
+-  function saveStory(fields: StoryFields, id?: string) {
+-    clearStoryDraft(id);
++  async function saveStory(fields: StoryFields, id?: string) {
+     const existing = activeProject?.stories.find((story) => story.id === id);
++    if (existing && /^\d+$/.test(existing.id)) await updateStoredStory(existing, fields);
+     if (existing) {
++      clearStoryDraft(id);
+       updateActive((project) => ({ ...project, stories: project.stories.map((story) => story.id === existing.id ? { ...story, ...fields, status: '완료' } : story) }));
+       return existing.id;
+     }
+-    const sources = [...new Set(activeProject?.changes.filter((change) => analysis?.changeIds.includes(change.id)).map((change) => change.service))];
+-    const story: Story = { ...fields, sourceChangeIds: analysis?.changeIds ?? [], id: crypto.randomUUID(), status: '완료', sources, date: todayLabel() };
++    if (!activeProject) throw new Error('프로젝트를 선택해주세요.');
++    const story = await createStoredStory(activeProject.id, fields, analysis?.changeIds ?? []);
++    clearStoryDraft(id);
+     updateActive((project) => ({
+       ...project,
+       stories: [story, ...project.stories],
+@@ -237,14 +273,18 @@ function useProjectsState() {
+     return story.id;
+   }
+ 
+-  function deleteStory(id: string) {
++  async function deleteStory(id: string) {
++    if (/^\d+$/.test(id)) await projectApi.projectRequest('/stories/' + id, { method: 'DELETE' });
+     clearStoryDraft(id);
+     updateActive((project) => ({ ...project, stories: project.stories.filter((story) => story.id !== id) }));
+   }
+ 
+   return {
+     loading, loadError, expired, retry: () => setAttempt(value => value + 1),
+-    projects,
++    timelineLoading: !!timelineProject && timelineResult?.id !== timelineProject,
++    timelineError: timelineResult?.id === timelineProject ? timelineResult?.error : undefined,
++    retryTimeline: () => setTimelineAttempt(value => value + 1),
++    saveConnection, projects,
+     activeProject,
+     githubSync, refreshGithubChanges, activityStates, refreshActivities, figma,
+     selectProject,
+diff --git a/tests/timeline-settings.test.mjs b/tests/timeline-settings.test.mjs
+new file mode 100644
+index 0000000..90e9434
+--- /dev/null
++++ b/tests/timeline-settings.test.mjs
+@@ -0,0 +1,84 @@
++import test from 'node:test';
++import assert from 'node:assert/strict';
++import { readFile } from 'node:fs/promises';
++import ts from 'typescript';
++
++function moduleUrl(source) {
++  const { outputText } = ts.transpileModule(source, {
++    compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
++  });
++  return 'data:text/javascript;base64,' + Buffer.from(outputText).toString('base64');
++}
++const read = path => readFile(new URL(path, import.meta.url), 'utf8');
++const client = moduleUrl((await read('../src/api/client.ts')).replace('import.meta.env.DEV', 'true'));
++const projects = moduleUrl((await read('../src/api/projects.ts'))
++  .replace("'./client'", JSON.stringify(client))
++  .replace("'./auth'", JSON.stringify(moduleUrl('export const getAccessToken = () => "test-token"')))
++  .replace("'../data/github'", JSON.stringify(moduleUrl('export const githubRepository = () => null'))));
++const timeline = moduleUrl((await read('../src/api/timeline.ts'))
++  .replace("'./projects'", JSON.stringify(projects))
++  .replace("'../data/projects'", JSON.stringify(moduleUrl('export const services = ["Figma", "GitHub", "Notion"]'))));
++const { loadTimeline } = await import(timeline);
++const { saveConnection, getConnections } = await import(projects);
++
++test('timeline loads remaining pages, maps nullable fields and joins distinct sources by Story ID', async t => {
++  const row = id => ({ id, title: '기록', content: '', created_at: '2026-11-01T01:02:03',
++    story_status: 'published', ai_analysis: { tags: ['설계'], summary: '요약' } });
++  const calls = [];
++  t.mock.method(globalThis, 'fetch', async (url, options) => {
++    assert.equal(options.headers.get('Authorization'), 'Bearer test-token');
++    calls.push(url);
++    const page = url.includes('/activities') ? [
++      { story_id: 101, source: 'github' }, { story_id: 101, source: 'github' }, { story_id: 101, source: 'figma' },
++    ] : url.endsWith('offset=0') ? Array.from({ length: 100 }, (_, i) => row(i + 1)) : [row(101)];
++    return Response.json(page);
++  });
++  const stories = await loadTimeline('7', new AbortController().signal);
++  assert.equal(calls.length, 3);
++  assert.equal(stories.length, 101);
++  assert.deepEqual(stories.at(-1).sources, ['GitHub', 'Figma']);
++  assert.equal(stories[0].why, '');
++  assert.equal(stories[0].status, '완료');
++  assert.equal(stories[0].date, '2026.11.01');
++  assert.deepEqual(stories[0].tags, ['설계']);
++});
++
++test('settings reads connections and sends null to disconnect a single service', async t => {
++  const calls = [];
++  t.mock.method(globalThis, 'fetch', async (url, options) => {
++    calls.push([url, options.method ?? 'GET', options.body && JSON.parse(options.body)]);
++    assert.equal(options.headers.get('Authorization'), 'Bearer test-token');
++    return Response.json({ project_id: 7, connections: [] });
++  });
++  await getConnections('7', new AbortController().signal);
++  await saveConnection('7', 'Notion', null);
++  assert.deepEqual(calls, [
++    ['/backend/api/projects/7/connections', 'GET', undefined],
++    ['/backend/api/projects/7/connections/notion', 'PATCH', { external_url: null }],
++  ]);
++});
++
++test('published Story is read back with its server ID after a fresh timeline request', async t => {
++  const { createStoredStory } = await import(timeline);
++  let stored;
++  t.mock.method(globalThis, 'fetch', async (url, options) => {
++    if (url === '/backend/stories' && options.method === 'POST') {
++      const input = JSON.parse(options.body);
++      assert.equal(input.project_id, 7);
++      assert.deepEqual(input.activity_ids, [14]);
++      stored = { ...input, id: 91, created_at: '2026-11-20T10:00:00' };
++      return Response.json(stored, { status: 201 });
++    }
++    if (url.startsWith('/backend/api/projects/7/stories?')) return Response.json([stored]);
++    assert.ok(url.startsWith('/backend/api/projects/7/activities?'));
++    return Response.json([{ source: 'notion', story_id: 91 }]);
++  });
++  const fields = { title: '회의 기록', memo: '내용', tags: ['회의'], summary: '요약' };
++  const saved = await createStoredStory('7', fields, ['github:team/repo:abc', 'notion:14']);
++  const [reloaded] = await loadTimeline('7', new AbortController().signal);
++  assert.equal(saved.id, '91');
++  assert.equal(reloaded.id, saved.id);
++  assert.equal(reloaded.memo, fields.memo);
++  assert.deepEqual(reloaded.tags, fields.tags);
++  assert.deepEqual(new Set(reloaded.sources), new Set(['Notion', 'GitHub']));
++});

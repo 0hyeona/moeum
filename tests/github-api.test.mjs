@@ -120,7 +120,7 @@ test('disconnected dashboard offers settings without a table, filters, or fetche
   assert.match(html, /설정에서 연결하기/);
   assert.match(html, /\/settings#settings-url-GitHub/);
   assert.doesNotMatch(html, /<table|브랜치 필터|새로고침/);
-  const loading = renderToStaticMarkup(React.createElement(MemoryRouter, null, React.createElement(GitHubActivity, { url })));
+  const loading = renderToStaticMarkup(React.createElement(MemoryRouter, null, React.createElement(GitHubActivity, { url, commits: [], state: { status: 'loading' } })));
   assert.match(loading, /GitHub 기록을 불러오는 중/);
   assert.doesNotMatch(loading, /설정에서 연결하기|<table/);
 });
