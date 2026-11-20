@@ -49,14 +49,17 @@ function downloadMarkdown(story: Story) {
 export function StoryDetailPage() {
   useDocumentTitle('Story 기록 보기');
   const { storyId } = useParams();
-  const { activeProject: project, deleteStory } = useProjects();
+  const { activeProject: project, timelineLoading, timelineError, retryTimeline, deleteStory } = useProjects();
   const { story, switching } = useStory(storyId);
   const navigate = useNavigate();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState('');
   if (!project) return <Navigate to="/projects" replace />;
 
   if (!story) {
-    if (switching) return null;
+    if (switching || timelineLoading) return <p role="status">Story를 불러오는 중이에요…</p>;
+    if (timelineError) return <><p role="alert">{timelineError}</p><button onClick={retryTimeline}>다시 시도</button></>;
     return (
       <div className={styles.page}>
         <PageHeading title="Story 기록 보기" />
@@ -68,9 +71,16 @@ export function StoryDetailPage() {
     );
   }
 
-  const remove = () => {
-    deleteStory(story.id);
-    navigate('/timeline', { replace: true });
+  const remove = async () => {
+    if (pending) return;
+    setPending(true);
+    setError('');
+    try {
+      await deleteStory(story.id);
+      navigate('/timeline', { replace: true });
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : '삭제하지 못했어요.');
+    } finally { setPending(false); }
   };
 
   return (
@@ -129,10 +139,11 @@ export function StoryDetailPage() {
         <ConfirmDialog
           title="Story를 삭제할까요?"
           description="삭제한 Story는 되돌릴 수 없어요."
+          pending={pending}
           confirmLabel="삭제"
           onConfirm={remove}
           onCancel={() => setConfirmingDelete(false)}
-        />
+        >{error && <p role="alert">{error}</p>}</ConfirmDialog>
       )}
     </div>
   );

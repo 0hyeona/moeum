@@ -26,12 +26,13 @@ export function StoryWritePage() {
   const editing = storyId !== undefined;
   const title = editing ? 'Story 수정' : 'Story 작성';
   useDocumentTitle(title);
-  const { activeProject: project, analysis } = useProjects();
+  const { activeProject: project, timelineLoading, timelineError, retryTimeline, analysis } = useProjects();
   const { story, switching } = useStory(storyId);
   if (!project) return <Navigate to="/projects" replace />;
 
   if (editing && !story) {
-    if (switching) return null;
+    if (switching || timelineLoading) return <p role="status">Story를 불러오는 중이에요…</p>;
+    if (timelineError) return <><p role="alert">{timelineError}</p><button onClick={retryTimeline}>다시 시도</button></>;
     return (
       <div className={styles.page}>
         <PageHeading title={title} />
@@ -93,7 +94,9 @@ function StoryForm({ heading, storyId, initialFields, aiTags }: StoryFormProps) 
     updateStoryDraft({ [key]: value }, storyId);
   }
 
-  function submit(event: FormEvent<HTMLFormElement>) {
+  const [pending, setPending] = useState(false);
+  const [saveError, setSaveError] = useState('');
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const title = fields.title.trim();
     if (!title) {
@@ -102,8 +105,15 @@ function StoryForm({ heading, storyId, initialFields, aiTags }: StoryFormProps) 
       titleInput.current?.focus();
       return;
     }
-    const id = saveStory({ ...fields, title }, storyId);
-    navigate(`/stories/${id}`, { replace: true });
+    if (pending) return;
+    setPending(true);
+    setSaveError('');
+    try {
+      const id = await saveStory({ ...fields, title }, storyId);
+      navigate(`/stories/${id}`, { replace: true });
+    } catch (cause) {
+      setSaveError(cause instanceof Error ? cause.message : '저장하지 못했어요.');
+    } finally { setPending(false); }
   }
 
   return (
@@ -177,7 +187,8 @@ function StoryForm({ heading, storyId, initialFields, aiTags }: StoryFormProps) 
             </div>
           </div>
         </div>
-        <button type="submit" className={ui.primaryButton}>{storyId ? '수정 완료' : 'Story 작성 완료'}</button>
+        {saveError && <p role="alert">{saveError}</p>}
+        <button disabled={pending} type="submit" className={ui.primaryButton}>{storyId ? '수정 완료' : 'Story 작성 완료'}</button>
       </form>
     </div>
   );

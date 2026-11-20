@@ -19,12 +19,14 @@ const sourceOptions: readonly FilterOption<'all' | Service>[] = [
 ];
 export function TimelinePage() {
   useDocumentTitle('타임라인');
-  const { activeProject: project } = useProjects();
+  const { activeProject: project, timelineLoading, timelineError, retryTimeline } = useProjects();
   const [period, setPeriod] = useState<DateRange | null>(null);
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState<'all' | StoryStatus>('all');
   const [source, setSource] = useState<'all' | Service>('all');
   if (!project) return <Navigate to="/projects" replace />;
+  if (timelineLoading) return <><PageHeading title="타임라인" /><p role="status">Story를 불러오는 중이에요…</p></>;
+  if (timelineError) return <><PageHeading title="타임라인" /><p role="alert">{timelineError}</p><button onClick={retryTimeline}>다시 시도</button></>;
   const keyword = query.trim().toLowerCase();
   const filtered = project.stories.filter(story =>
     (!period || (story.date >= period.start && story.date <= period.end)) &&
