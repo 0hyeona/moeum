@@ -3,25 +3,17 @@ import { loadExternalActivities, refreshFigmaPage } from '../api/externalActivit
 import { replaceServiceChanges, type ActivityState } from '../data/activity';
 import type { Project } from '../data/projects';
 
-type RefreshState =
-  | { status: 'syncing' }
-  | { status: 'waiting'; message: string; retryAt?: number }
-  | { status: 'error'; message: string; key: string };
-
-function savedCursor(key: string) {
-  try { return sessionStorage.getItem(key); } catch { return null; }
-}
+type RefreshState = { status: 'syncing' } | { status: 'error'; message: string };
 
 export function useFigmaActivities(userId: number, project: Project | undefined, setProjects: Dispatch<SetStateAction<Project[]>>) {
   const projectId = project?.id;
   const url = project?.urls?.Figma;
-  const key = `moeum.figma-cursor.${JSON.stringify([userId, projectId, url])}`;
-
+  const key = JSON.stringify([userId, projectId, url]);
   const [lists, setLists] = useState<Record<string, ActivityState>>({});
   const [refreshes, setRefreshes] = useState<Partial<Record<string, RefreshState>>>({});
-  const [cursors, setCursors] = useState<Record<string, string | null>>({});
   const reads = useRef(new Map<string, AbortController>());
   const syncs = useRef(new Map<string, { key: string; controller: AbortController }>());
+  const retryDeadlines = useRef(new Map<string, number>());
 
   const readList = useCallback(async (signal: AbortSignal) => {
     if (!projectId || !url) return;
@@ -35,7 +27,7 @@ export function useFigmaActivities(userId: number, project: Project | undefined,
     } catch (error) {
       if (signal.aborted) return;
       setLists(current => ({ ...current, [key]: {
-        status: 'error', error: error instanceof Error ? error.message : '저장된 Figma 변경사항을 불러오지 못했어요.',
+        status: 'error', error: error instanceof Error ? error.message : 'Figma 변경사항을 불러오지 못했어요.',
       } }));
     }
   }, [key, projectId, setProjects, url]);
@@ -64,49 +56,32 @@ export function useFigmaActivities(userId: number, project: Project | undefined,
     };
   }, []);
 
-  const state = projectId ? refreshes[projectId] : undefined;
-  const retryAt = state?.status === 'waiting' ? state.retryAt : undefined;
-  useEffect(() => {
-    if (!projectId || retryAt === undefined) return;
-    const id = projectId;
-    const deadline = retryAt;
-    let timer: ReturnType<typeof setTimeout>;
-    function clearWait() {
-      const remaining = deadline - Date.now();
-      if (remaining > 0) {
-        timer = setTimeout(clearWait, Math.min(remaining, 2_147_483_647));
-        return;
-      }
-      setRefreshes(current => current[id] === state ? { ...current, [id]: undefined } : current);
-    }
-    clearWait();
-    return () => clearTimeout(timer);
-  }, [projectId, retryAt, state]);
-
-  const cursor = key in cursors ? cursors[key] : savedCursor(key);
   async function refresh() {
-    if (!projectId || !url || reads.current.has(key) || syncs.current.has(projectId) || (retryAt ?? 0) > Date.now()) return;
+    if (!projectId || !url || reads.current.has(key) || syncs.current.has(projectId)) return;
     const controller = new AbortController();
     syncs.current.set(projectId, { key, controller });
-    setRefreshes(current => ({ ...current, [projectId]: { status: 'syncing' } }));
+    setRefreshes(current => ({ ...current, [key]: { status: 'syncing' } }));
     try {
-      const result = await refreshFigmaPage(projectId, cursor, controller.signal);
-      if (controller.signal.aborted) return;
-      if ('message' in result) {
-        setRefreshes(current => ({ ...current, [projectId]: { status: 'waiting', ...result } }));
-        return;
-      }
-      setCursors(current => ({ ...current, [key]: result.nextCursor }));
-      try {
-        if (result.nextCursor) sessionStorage.setItem(key, result.nextCursor);
-        else sessionStorage.removeItem(key);
-      } catch { /* The in-memory cursor also works when storage is unavailable. */ }
+      // Every click refreshes the displayed records, even during provider throttling.
       await readList(controller.signal);
-      if (!controller.signal.aborted) setRefreshes(current => ({ ...current, [projectId]: undefined }));
+      if (controller.signal.aborted) return;
+      if ((retryDeadlines.current.get(key) ?? 0) <= Date.now()) {
+        // Refresh means the newest records, never a saved pagination cursor.
+        const result = await refreshFigmaPage(projectId, null, controller.signal);
+        if (controller.signal.aborted) return;
+        if ('message' in result) {
+          if (result.retryAt !== undefined) retryDeadlines.current.set(key, result.retryAt);
+          // Keep cached data visible; provider retry deadlines are internal state.
+        } else {
+          retryDeadlines.current.delete(key);
+          await readList(controller.signal);
+        }
+      }
+      if (!controller.signal.aborted) setRefreshes(current => ({ ...current, [key]: undefined }));
     } catch (error) {
       if (controller.signal.aborted) return;
-      setRefreshes(current => ({ ...current, [projectId]: {
-        status: 'error', key, message: error instanceof Error ? error.message : 'Figma 변경사항을 수집하지 못했어요.',
+      setRefreshes(current => ({ ...current, [key]: {
+        status: 'error', message: error instanceof Error ? error.message : 'Figma 변경사항을 새로고침하지 못했어요.',
       } }));
     } finally {
       if (syncs.current.get(projectId)?.controller === controller) syncs.current.delete(projectId);
@@ -114,15 +89,13 @@ export function useFigmaActivities(userId: number, project: Project | undefined,
   }
 
   const listState: ActivityState = !url ? { status: 'disconnected' } : lists[key] ?? { status: 'loading' };
+  const state = refreshes[key];
   const syncing = state?.status === 'syncing';
-  const waiting = state?.status === 'waiting';
-  const error = state?.status === 'error' && state.key === key ? state.message : undefined;
-  const notice = waiting && retryAt !== undefined
-    ? `${state.message} ${new Date(retryAt).toLocaleString('ko-KR')} 이후 다시 시도할 수 있어요.`
-    : waiting ? state.message : error;
+  const error = state?.status === 'error' ? state.message : undefined;
   return {
-    listState, syncing, notice, error, retryAt, hasMore: Boolean(cursor),
-    refreshDisabled: syncing || listState.status === 'loading' || (retryAt ?? 0) > Date.now(),
+    listState, syncing, notice: error, error,
+    retryAt: undefined as number | undefined, hasMore: false,
+    refreshDisabled: syncing || listState.status === 'loading',
     reload, refresh,
   };
 }
