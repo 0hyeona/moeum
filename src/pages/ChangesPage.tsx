@@ -315,6 +315,13 @@ function FeedCard({ change, selected, disabled, onToggle, onHide }: FeedCardProp
               <span className={styles.diffContent}>{detail.content}</span>
             </span>)}
           </span>
+        ) : change.service === 'Figma' ? (
+          <span className={styles.notionDetails}>
+            <span className={styles.diffSection}>
+              <span className={styles.diffLabel}>변경 내용</span>
+              <span className={styles.diffContent}>{changeDescription(change) || '이 버전에는 상세 변경 설명이 저장되어 있지 않아요. 수정 전후의 내용은 현재 기록에 포함되어 있지 않아요.'}</span>
+            </span>
+          </span>
         ) : changeDescription(change) && <span className={styles.description}>{changeDescription(change)}</span>}
         {!(change.service === 'Notion' && change.status === '업데이트') && <span className={styles.status}><Badge>{change.status}</Badge></span>}
       </label>
