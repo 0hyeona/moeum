@@ -84,3 +84,10 @@
   .tags button { min-height: 44px; padding: 6px 10px; font-size: 12px; white-space: nowrap; }
   .timeline { gap: 16px; }
 }
+
+
+/* Match the tags displayed in Story details. */
+.tags button { min-height: 30px; padding: 5px 9px; border-color: var(--color-border-strong); border-radius: var(--radius-control); background: var(--color-background); color: var(--color-muted); font-size: 13px; line-height: 18px; }
+@media (max-width: 700px) {
+  .tags button { min-height: 30px; padding: 4px 8px; font-size: 14px; line-height: 20px; }
+}
