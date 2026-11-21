@@ -10,6 +10,7 @@ import { PasswordResetPage } from './pages/PasswordResetPage';
 import { SignupPage } from './pages/SignupPage';
 import { GithubCallbackPage } from './pages/GithubCallbackPage';
 import { NotionCallbackPage } from './pages/NotionCallbackPage';
+import { FigmaCallbackPage } from './pages/FigmaCallbackPage';
 import { ProjectCreatePage } from './pages/ProjectCreatePage';
 import { ProjectListPage } from './pages/ProjectListPage';
 import { SettingsPage } from './pages/SettingsPage';
@@ -28,6 +29,7 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/signup" element={<SignupPage />} />
           <Route path="/auth/github/callback" element={<GithubCallbackPage />} />
           <Route path="/auth/notion/callback" element={<NotionCallbackPage />} />
+          <Route path="/auth/figma/callback" element={<FigmaCallbackPage />} />
           <Route path="/password-reset" element={<PasswordResetPage />} />
           <Route element={<AuthBoundary><Outlet /></AuthBoundary>}>
           <Route element={<AppLayout header="centered" />}>

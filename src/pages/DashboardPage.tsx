@@ -1,4 +1,5 @@
 import { StoryLoadNotice } from '../components/StoryLoadNotice';
+import { FigmaConnection } from '../components/FigmaConnection';
 import { useEffect, useRef, useState } from 'react';
 import { startNotionConnection } from '../api/notion';
 import { needsNotionConnection } from '../data/notionConnectionState';
@@ -20,6 +21,7 @@ export function DashboardPage() {
   useDocumentTitle('대시보드');
   const { activeProject: project, storyListState, githubCommits, activityStates, refreshActivities, figma } = useProjects();
   const { reload: reloadFigma } = figma;
+  const [figmaConnected, setFigmaConnected] = useState<boolean | null>(null);
   useEffect(() => reloadFigma(), [reloadFigma]);
   if (!project) return <Navigate to="/projects" replace />;
 
@@ -38,9 +40,10 @@ export function DashboardPage() {
           <ul className={styles.stats}>
             {services.map(service => {
               const state = activityStates[service];
-              const needsConnection = service === 'Notion' && needsNotionConnection(state);
+              const needsConnection = (service === 'Notion' && needsNotionConnection(state))
+                || (service === 'Figma' && figmaConnected === false);
               const count = project.changes.filter(change => change.service === service).length;
-              const showFigmaControls = service === 'Figma' && Boolean(project.urls?.Figma);
+              const showFigmaControls = service === 'Figma' && Boolean(project.urls?.Figma) && figmaConnected === true;
               const retryAt = showFigmaControls ? figma.retryAt : undefined;
               return (
                 <li key={service} className={styles.stat} data-waiting={retryAt !== undefined || undefined}>
@@ -50,7 +53,9 @@ export function DashboardPage() {
                   </span>
                   {!needsConnection && <PendingCount sync={state.status} state={project.services[service]} count={count} />}
                   <div className={styles.statActions}>
-                    {needsConnection && <NotionConnectAction />}
+                    {service === 'Notion' && needsConnection && <NotionConnectAction />}
+                    {service === 'Figma' && <FigmaConnection compact returnTo="/dashboard"
+                      onStatus={setFigmaConnected} buttonClassName={styles.statButton} />}
                     {showFigmaControls && (
                       <button type="button" className={styles.statButton} disabled={figma.refreshDisabled}
                         onClick={figma.refresh} aria-label={figma.syncing || retryAt !== undefined ? undefined : 'Figma 새로고침'}>
