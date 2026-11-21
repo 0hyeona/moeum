@@ -158,3 +158,26 @@ test('malformed or cross-project responses are rejected', async t => {
   mock(t, () => json([{ ...item(1), project_id: 8 }]));
   await assert.rejects(loadExternalActivities(request()), /응답 형식/);
 });
+
+
+test('plugin refresh reads the last upload even while REST is rate limited and never posts a sync', async t => {
+  const calls = [];
+  mock(t, (url, options) => {
+    calls.push(options.method + ' ' + url);
+    assert.equal(options.method, 'GET');
+    return json({ ...ready, can_sync: false, retry_after_seconds: 400000,
+      transport: 'plugin', plugin: { connected: true, last_received_at: '2026-11-21T15:00:00Z' } });
+  });
+  const result = await refresh();
+  assert.equal(result.nextCursor, null);
+  assert.match(result.notice, /플러그인 전송/);
+  assert.equal(calls.length, 1);
+});
+
+test('expired or pending plugin session asks for pairing without consuming REST quota', async t => {
+  mock(t, (_, options) => {
+    assert.equal(options.method, 'GET');
+    return json({ ...ready, transport: 'plugin', plugin: { connected: false, last_received_at: null } });
+  });
+  assert.match((await refresh()).notice, /연결 코드를 입력/);
+});

@@ -3,7 +3,7 @@ import { loadExternalActivities, refreshFigmaPage } from '../api/externalActivit
 import { replaceServiceChanges, type ActivityState } from '../data/activity';
 import type { Project } from '../data/projects';
 
-type RefreshState = { status: 'syncing' } | { status: 'error'; message: string };
+type RefreshState = { status: 'syncing' } | { status: 'error' | 'info'; message: string };
 
 export function useFigmaActivities(userId: number, project: Project | undefined, setProjects: Dispatch<SetStateAction<Project[]>>) {
   const projectId = project?.id;
@@ -13,7 +13,6 @@ export function useFigmaActivities(userId: number, project: Project | undefined,
   const [refreshes, setRefreshes] = useState<Partial<Record<string, RefreshState>>>({});
   const reads = useRef(new Map<string, AbortController>());
   const syncs = useRef(new Map<string, { key: string; controller: AbortController }>());
-  const retryDeadlines = useRef(new Map<string, number>());
 
   const readList = useCallback(async (signal: AbortSignal) => {
     if (!projectId || !url) return;
@@ -65,19 +64,18 @@ export function useFigmaActivities(userId: number, project: Project | undefined,
       // Every click refreshes the displayed records, even during provider throttling.
       await readList(controller.signal);
       if (controller.signal.aborted) return;
-      if ((retryDeadlines.current.get(key) ?? 0) <= Date.now()) {
-        // Refresh means the newest records, never a saved pagination cursor.
-        const result = await refreshFigmaPage(projectId, null, controller.signal);
-        if (controller.signal.aborted) return;
-        if ('message' in result) {
-          if (result.retryAt !== undefined) retryDeadlines.current.set(key, result.retryAt);
-          // Keep cached data visible; provider retry deadlines are internal state.
-        } else {
-          retryDeadlines.current.delete(key);
-          await readList(controller.signal);
-        }
+      // Check the backend on each click so enabling live mode takes effect even
+      // when an earlier REST request returned a days-long deadline.
+      const result = await refreshFigmaPage(projectId, null, controller.signal);
+      if (controller.signal.aborted) return;
+      let notice: string | undefined;
+      if ('message' in result) notice = result.message;
+      else {
+        await readList(controller.signal);
+        notice = result.notice;
       }
-      if (!controller.signal.aborted) setRefreshes(current => ({ ...current, [key]: undefined }));
+      if (!controller.signal.aborted) setRefreshes(current => ({ ...current,
+        [key]: notice ? { status: 'info', message: notice } : undefined }));
     } catch (error) {
       if (controller.signal.aborted) return;
       setRefreshes(current => ({ ...current, [key]: {
@@ -93,7 +91,7 @@ export function useFigmaActivities(userId: number, project: Project | undefined,
   const syncing = state?.status === 'syncing';
   const error = state?.status === 'error' ? state.message : undefined;
   return {
-    listState, syncing, notice: error, error,
+    listState, syncing, notice: state && 'message' in state ? state.message : undefined, error,
     retryAt: undefined as number | undefined, hasMore: false,
     refreshDisabled: syncing || listState.status === 'loading',
     reload, refresh,

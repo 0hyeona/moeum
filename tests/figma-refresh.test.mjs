@@ -51,7 +51,7 @@ function harness() {
   return h;
 }
 
-test('provider waiting never blocks cached refresh or displays a countdown', async () => {
+test('provider waiting keeps cached refresh available and explains the wait', async () => {
   const h = harness();
   let reads = 0, syncs = 0;
   h.load = async () => [{ title: 'Cached ' + ++reads }];
@@ -60,10 +60,10 @@ test('provider waiting never blocks cached refresh or displays a countdown', asy
   let view = h.render();
   assert.equal(view.refreshDisabled, false);
   assert.equal(view.retryAt, undefined);
-  assert.equal(view.notice, undefined);
+  assert.equal(view.notice, 'rate limited');
   await view.refresh();
   assert.equal(reads, 2);
-  assert.equal(syncs, 1);
+  assert.equal(syncs, 2);
   assert.equal(h.projects[0].changes[0].title, 'Cached 2');
 });
 
@@ -107,4 +107,18 @@ test('real connection errors remain visible while cached records survive', async
   assert.equal(h.projects[0].changes[0].title, 'Cached');
   assert.equal(h.render().error, 'Connection unavailable');
   assert.equal(h.render().refreshDisabled, false);
+});
+
+
+test('enabling live mode during a REST cooldown is checked on the next refresh', async () => {
+  const h = harness();
+  let calls = 0;
+  h.sync = async () => ++calls === 1
+    ? { message: 'REST waiting', retryAt: Date.now() + 400000000 }
+    : { nextCursor: null, notice: 'Plugin latest upload received' };
+  await h.render().refresh();
+  await h.render().refresh();
+  assert.equal(calls, 2);
+  assert.equal(h.render().notice, 'Plugin latest upload received');
+  assert.equal(h.render().error, undefined);
 });

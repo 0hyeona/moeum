@@ -6,8 +6,9 @@ import type { Change } from '../data/projects';
 type ExternalService = 'Figma' | 'Notion' | 'GitHub';
 type ExternalRequest = { projectId: string; service: ExternalService; signal: AbortSignal };
 type SyncResult = { source: string; has_next: boolean; next_cursor: string | null };
-type FigmaSyncStatus = { running: boolean; can_sync: boolean; retry_after_seconds: number; next_sync_at: string | null };
-type FigmaRefreshResult = { nextCursor: string | null } | { message: string; retryAt?: number };
+type FigmaSyncStatus = { running: boolean; can_sync: boolean; retry_after_seconds: number; next_sync_at: string | null;
+  transport?: 'rest' | 'plugin'; plugin?: { connected: boolean; last_received_at: string | null } };
+type FigmaRefreshResult = { nextCursor: string | null; notice?: string } | { message: string; retryAt?: number };
 type ActivityResponse = {
   activity_id: number; project_id: number; story_id: number | null;
   source: string; title: string; description: string | null;
@@ -56,10 +57,20 @@ export async function refreshFigmaPage(projectId: string, cursor: string | null,
   }
 
   const status = await getStatus();
+  if (status.transport === 'plugin') {
+    const received = Date.parse(status.plugin?.last_received_at ?? '');
+    const notice = !status.plugin?.connected ? 'Figma 플러그인에서 연결 코드를 입력해 주세요. 전송된 변경사항은 계속 볼 수 있어요.'
+      : !Number.isFinite(received) ? 'Figma 플러그인의 첫 전송을 기다리고 있어요.'
+      : `플러그인 전송: ${new Intl.DateTimeFormat('ko-KR', { dateStyle: 'short', timeStyle: 'medium' }).format(received)} · 목록을 새로 불러왔어요.`;
+    // The editor pushes directly to MOEUM; an existing REST 429 does not block reads.
+    return { nextCursor: null, notice };
+  }
   if (status.running) return { message: 'Figma 수집이 이미 진행 중이에요. 잠시 후 새로고침으로 상태를 확인해주세요.' };
   if (!status.can_sync) {
     const retryAt = statusRetryAt(status);
-    return { message: retryAt ? 'Figma 재수집 대기 중이에요.' : 'Figma 재수집 대기 중이에요. 잠시 후 다시 시도해주세요.', retryAt };
+    const message = retryAt ? `Figma 재수집 대기 중이에요. ${new Intl.DateTimeFormat('ko-KR', { dateStyle: 'short', timeStyle: 'short' }).format(retryAt)} 이후 다시 수집할 수 있어요. 실시간 연결에서는 전송된 내용을 바로 볼 수 있어요.`
+      : 'Figma 재수집 대기 중이에요. 잠시 후 다시 시도해주세요.';
+    return { message, retryAt };
   }
 
   try {

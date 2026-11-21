@@ -1,0 +1,10 @@
+src/api/figmaPlugin.ts
+src/api/externalActivities.ts
+src/components/FigmaLiveConnection.tsx
+src/components/FigmaLiveConnection.module.css
+src/state/useFigmaActivities.ts
+src/pages/DashboardPage.tsx
+src/pages/SettingsPage.tsx
+tests/figma-refresh.test.mjs
+tests/external-activities.test.mjs
+figma-live-frontend-files.txt

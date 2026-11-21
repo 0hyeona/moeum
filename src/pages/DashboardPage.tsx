@@ -1,5 +1,6 @@
 import { StoryLoadNotice } from '../components/StoryLoadNotice';
 import { FigmaConnection } from '../components/FigmaConnection';
+import { FigmaLiveConnection } from '../components/FigmaLiveConnection';
 import { useEffect, useRef, useState } from 'react';
 import { startNotionConnection } from '../api/notion';
 import { needsNotionConnection } from '../data/notionConnectionState';
@@ -22,6 +23,8 @@ export function DashboardPage() {
   const { activeProject: project, storyListState, githubCommits, activityStates, refreshActivities, figma } = useProjects();
   const { reload: reloadFigma } = figma;
   const [figmaConnected, setFigmaConnected] = useState<boolean | null>(null);
+  const [figmaLiveEnabled, setFigmaLiveEnabled] = useState(false);
+  useEffect(() => setFigmaLiveEnabled(false), [project?.id, project?.urls?.Figma]);
   useEffect(() => reloadFigma(), [reloadFigma]);
   if (!project) return <Navigate to="/projects" replace />;
 
@@ -41,9 +44,9 @@ export function DashboardPage() {
             {services.map(service => {
               const state = activityStates[service];
               const needsConnection = (service === 'Notion' && needsNotionConnection(state))
-                || (service === 'Figma' && figmaConnected === false);
+                || (service === 'Figma' && figmaConnected === false && !figmaLiveEnabled);
               const count = project.changes.filter(change => change.service === service).length;
-              const showFigmaControls = service === 'Figma' && Boolean(project.urls?.Figma) && figmaConnected === true;
+              const showFigmaControls = service === 'Figma' && Boolean(project.urls?.Figma) && (figmaConnected === true || figmaLiveEnabled);
               const retryAt = showFigmaControls ? figma.retryAt : undefined;
               return (
                 <li key={service} className={styles.stat} data-waiting={retryAt !== undefined || undefined}>
@@ -54,7 +57,7 @@ export function DashboardPage() {
                   {!needsConnection && <PendingCount sync={state.status} state={project.services[service]} count={count} />}
                   <div className={styles.statActions}>
                     {service === 'Notion' && needsConnection && <NotionConnectAction />}
-                    {service === 'Figma' && <FigmaConnection compact returnTo="/dashboard"
+                    {service === 'Figma' && !figmaLiveEnabled && <FigmaConnection compact returnTo="/dashboard"
                       onStatus={setFigmaConnected} buttonClassName={styles.statButton} />}
                     {showFigmaControls && (
                       <button type="button" className={styles.statButton} disabled={figma.refreshDisabled}
@@ -73,6 +76,8 @@ export function DashboardPage() {
                     )}
                   </div>
                   <div className={styles.statNotes}>
+                    {service === 'Figma' && project.urls?.Figma && <FigmaLiveConnection
+                      key={`${project.id}:${project.urls.Figma}`} projectId={project.id} fileUrl={project.urls.Figma} onEnabled={setFigmaLiveEnabled} />}
                     {state.status === 'error' && !needsConnection && <p className={styles.statError} role="alert">{state.error}</p>}
                     {state.status === 'error' && service === 'Figma' && (
                       <button type="button" className={styles.statButton} disabled={figma.syncing} onClick={figma.reload}>목록 다시 조회</button>
