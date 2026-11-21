@@ -186,7 +186,7 @@ export function ChangesPage() {
                 <div className={styles.noticeIcon}><ServiceIcon service={item} /></div>
                 <div className={styles.noticeContent}>
                   <div className={styles.noticeTitle}><strong>Figma</strong><span role="status">
-                    {figma.syncing ? '수집 중…' : state.status === 'loading' ? '저장된 변경사항 조회 중…' : state.status === 'error' ? '조회 실패' : '저장된 변경사항'}
+                    {figma.syncing ? '수집 중…' : figma.error ? '수집 실패' : state.status === 'loading' ? '불러오는 중' : state.status === 'error' ? '조회 실패' : '수집 완료'}
                   </span></div>
                   {service === 'all' && (state.status === 'ready' || count > 0) && <p>미정리 변경사항 {count}개</p>}
                   {state.status === 'error' && <p role="alert">{state.error}</p>}
@@ -205,7 +205,7 @@ export function ChangesPage() {
               <p>{state.status === 'loading' ? '변경사항을 수집·조회하고 있어요…' : state.status === 'pending' ? '변경사항 조회를 준비하고 있어요.' : state.status === 'disconnected' ? '서비스를 연결하면 변경사항을 모아볼 수 있어요.' : state.status === 'ready' ? `미정리 변경사항 ${project.changes.filter(change => change.service === item).length}개` : state.error}</p></div>
               {item === 'Notion' && state.status === 'error' && <Link className={styles.textButton} to="/settings#notion-account">Notion 연결 설정</Link>}
               {item !== 'Figma' && state.status === 'error' && <button type="button" className={styles.textButton} onClick={() => refreshActivities(item)}>다시 시도</button>}
-              {service === 'all' && item === 'Notion' && (state.status === 'ready' || state.status === 'loading') && <button type="button" className={styles.textButton} disabled={state.status === 'loading'} onClick={() => refreshActivities(item)}>새로고침</button>}
+              {service === 'all' && item !== 'Figma' && (state.status === 'ready' || state.status === 'loading') && <button type="button" className={styles.textButton} disabled={state.status === 'loading'} onClick={() => refreshActivities(item)}>새로고침</button>}
               {state.status === 'disconnected' && <Link className={styles.textButton} to={'/settings#settings-url-' + item}>연결하기</Link>}
             </div>;
           })}
