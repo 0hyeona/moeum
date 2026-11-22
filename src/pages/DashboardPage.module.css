@@ -19,7 +19,10 @@
 .count { align-items: baseline; gap: 4px; white-space: nowrap; }
 .count strong { color: var(--color-text-strong); font-size: 32px; font-variant-numeric: tabular-nums; line-height: 38px; letter-spacing: -.04em; }
 .statActions { display: flex; flex-wrap: wrap; align-items: start; gap: 6px; min-height: 34px; }
+.statActions > p { flex-basis: 100%; min-width: 0; margin: 0; overflow-wrap: anywhere; word-break: keep-all; }
+.statActions > p a { color: var(--color-link); font-size: inherit; }
 .statButton { composes: secondaryButton from '../components/ui.module.css'; }
+.statActions .statButton { white-space: normal; text-align: center; }
 .statButton:hover:not(:disabled) { border-color: var(--color-subtle); background: var(--color-background); color: var(--color-text-strong); }
 .statButton:disabled { background: transparent; color: var(--color-muted); cursor: default; }
 .stat[data-waiting='true'] .statButton:disabled { border-color: #eddfc7; background: #fff2da; color: #80521b; }
@@ -75,6 +78,7 @@
   .count, .statStatus { grid-column: 2; grid-row: 1; justify-content: flex-end; min-height: 32px; }
   .count strong { font-size: 26px; line-height: 32px; }
   .statActions { grid-column: 3; grid-row: 1; justify-content: flex-end; }
+  .statActions:has([role='alert']) { grid-column: 1 / -1; grid-row: 2; justify-content: flex-start; }
   .statActions .statButton { width: 100%; padding-inline: 8px; }
   .statNotes { grid-column: 1 / -1; padding: 7px 0 0; border-top: 1px solid var(--color-border); }
   .retryNote time { display: inline; }

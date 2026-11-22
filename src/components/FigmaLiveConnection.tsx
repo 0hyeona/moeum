@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createFigmaPairing, disconnectFigmaPlugin, getFigmaPluginStatus, type FigmaPairing, type FigmaPluginStatus } from '../api/figmaPlugin';
 import ui from './ui.module.css';
 import styles from './FigmaLiveConnection.module.css';
@@ -13,14 +13,38 @@ export function FigmaLiveConnection({ projectId, fileUrl, onEnabled }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
+  const dialog = useRef<HTMLDialogElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    dialog.current?.showModal();
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = previous; };
+  }, [open]);
+
+  function close() {
+    dialog.current?.close();
+    setOpen(false);
+    trigger.current?.focus();
+  }
 
   useEffect(() => {
     const reveal = () => {
       if (window.location.hash === `#${connectionId}`) setOpen(true);
     };
+    const followLink = (event: MouseEvent) => {
+      const link = event.target instanceof Element ? event.target.closest('a') : null;
+      if (link?.getAttribute('href') === `#${connectionId}`) setOpen(true);
+    };
     reveal();
     window.addEventListener('hashchange', reveal);
-    return () => window.removeEventListener('hashchange', reveal);
+    window.addEventListener('click', followLink);
+    return () => {
+      window.removeEventListener('hashchange', reveal);
+      window.removeEventListener('click', followLink);
+    };
   }, [connectionId]);
 
   useEffect(() => {
@@ -59,10 +83,17 @@ export function FigmaLiveConnection({ projectId, fileUrl, onEnabled }: Props) {
   }
 
   return <div id={connectionId} className={styles.connection}>
-    <button type="button" className={ui.ghostButton} onClick={() => setOpen(value => !value)} aria-expanded={open}>
+    <button ref={trigger} type="button" className={`${ui.ghostButton} ${styles.trigger}`} onClick={() => setOpen(true)} aria-haspopup="dialog" aria-expanded={open}>
       {connection?.enabled ? '실시간 연결 관리' : '플러그인으로 실시간 연결'}
     </button>
-    {open && <section className={styles.panel} aria-label="Figma 실시간 연결">
+    {open && <dialog ref={dialog} className={styles.panel} aria-label="Figma 실시간 연결"
+      onCancel={event => { event.preventDefault(); close(); }}
+      onClick={event => {
+        if (event.target !== event.currentTarget) return;
+        const bounds = event.currentTarget.getBoundingClientRect();
+        if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) close();
+      }}>
+      <header className={styles.header}><h2>Figma 실시간 연결</h2><button type="button" className={ui.ghostButton} aria-label="실시간 연결 닫기" onClick={close}>×</button></header>
       <p>Figma에서 ‘모음 실시간 연결’을 켜두면 수정 내용을 바로 보내요.</p>
       <ol>
         <li>Figma Desktop에서 모음 플러그인을 실행하세요.</li>
@@ -84,6 +115,6 @@ export function FigmaLiveConnection({ projectId, fileUrl, onEnabled }: Props) {
       {connection?.enabled && <button type="button" className={ui.ghostButton} disabled={busy} onClick={() => void disconnect()}>실시간 연결 해제</button>}
       <p className={styles.hint}>새 코드는 이전 플러그인 연결을 교체해요. 연결은 최대 8시간 유지돼요.</p>
       {error && <p role="alert" className={styles.error}>{error}</p>}
-    </section>}
+    </dialog>}
   </div>;
 }
