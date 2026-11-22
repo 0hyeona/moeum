@@ -6,12 +6,22 @@ import styles from './FigmaLiveConnection.module.css';
 type Props = { projectId: string; fileUrl: string; onEnabled?: (enabled: boolean) => void };
 
 export function FigmaLiveConnection({ projectId, fileUrl, onEnabled }: Props) {
+  const connectionId = `figma-live-${projectId}`;
   const [connection, setConnection] = useState<FigmaPluginStatus>();
   const [pairing, setPairing] = useState<FigmaPairing>();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    const reveal = () => {
+      if (window.location.hash === `#${connectionId}`) setOpen(true);
+    };
+    reveal();
+    window.addEventListener('hashchange', reveal);
+    return () => window.removeEventListener('hashchange', reveal);
+  }, [connectionId]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -48,7 +58,7 @@ export function FigmaLiveConnection({ projectId, fileUrl, onEnabled }: Props) {
     finally { setBusy(false); }
   }
 
-  return <div className={styles.connection}>
+  return <div id={connectionId} className={styles.connection}>
     <button type="button" className={ui.ghostButton} onClick={() => setOpen(value => !value)} aria-expanded={open}>
       {connection?.enabled ? '실시간 연결 관리' : '플러그인으로 실시간 연결'}
     </button>

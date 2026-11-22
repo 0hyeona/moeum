@@ -264,7 +264,7 @@ function Connections({ project }: { project: Project }) {
   return <section className={styles.panel} aria-labelledby="tools-heading">
     <SectionHeader id="tools-heading" title="연동 서비스" description="프로젝트에서 사용할 작업 도구의 URL을 관리합니다." />
     <NotionConnection />
-    <FigmaConnection />
+    <FigmaConnection pluginConnectionId={project.urls?.Figma ? `figma-live-${project.id}` : undefined} />
     {project.urls?.Figma && <FigmaLiveConnection key={project.urls.Figma} projectId={project.id} fileUrl={project.urls.Figma} />}
     <StatusText message={message} />
     {error && <p className={form.error} role="alert">{error}</p>}

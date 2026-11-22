@@ -58,6 +58,7 @@ export function DashboardPage() {
                   <div className={styles.statActions}>
                     {service === 'Notion' && needsConnection && <NotionConnectAction />}
                     {service === 'Figma' && !figmaLiveEnabled && <FigmaConnection compact returnTo="/dashboard"
+                      pluginConnectionId={project.urls?.Figma ? `figma-live-${project.id}` : undefined}
                       onStatus={setFigmaConnected} buttonClassName={styles.statButton} />}
                     {showFigmaControls && (
                       <button type="button" className={styles.statButton} disabled={figma.refreshDisabled}

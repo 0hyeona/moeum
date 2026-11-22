@@ -1,4 +1,5 @@
 import type { Change } from '../data/projects';
+import { formatFigmaDescription } from '../data/figmaChanges';
 
 export function newestChanges(changes: Change[]): Change[] {
   const now = Date.now();
@@ -19,7 +20,7 @@ export function changeDescription(change: Change) {
   if (change.service === 'Notion') {
     return description.replace(/(?:\n\s*)?두 수집 시점 사이의 차이입니다\.?\s*$/, '').trim();
   }
-  return description === change.title.trim() ? '' : description;
+  return description === change.title.trim() ? '' : formatFigmaDescription(description);
 }
 
 export function notionDetails(change: Change) {
