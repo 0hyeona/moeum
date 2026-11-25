@@ -54,7 +54,7 @@ export function DashboardPage() {
                     <span className={styles.statIcon}><ServiceIcon service={service} size={18} /></span>
                     {service}
                   </span>
-                  {!needsConnection && <PendingCount sync={state.status} state={project.services[service]} count={count} />}
+                  {!needsConnection && <PendingCount sync={service === 'GitHub' && state.status === 'error' && githubCommits.length > 0 ? 'ready' : state.status} state={project.services[service]} count={count} />}
                   <div className={styles.statActions}>
                     {service === 'Notion' && needsConnection && <NotionConnectAction />}
                     {service === 'Figma' && !figmaLiveEnabled && <FigmaConnection compact returnTo="/dashboard"
