@@ -155,7 +155,7 @@ function ProjectInfo({ project }: { project: Project }) {
     <section className={styles.panel} aria-labelledby="info-heading">
       <SectionHeader id="info-heading" title="프로젝트 정보" description="수정 후 Enter를 누르거나 입력칸을 벗어나면 자동으로 저장돼요." />
       {saveError && <p className={form.error} role="alert">{saveError}</p>}
-      <fieldset className={`${styles.fields} ${styles.fieldset}`} disabled={pending} aria-busy={pending}>
+      <fieldset className={`${styles.fields} ${styles.fieldset}`} aria-busy={pending}>
         <div className={form.field}>
           <div className={form.labelRow}>
             <label htmlFor="settings-name" className={form.label}>프로젝트명 (필수)</label>
@@ -168,6 +168,7 @@ function ProjectInfo({ project }: { project: Project }) {
             maxLength={50}
             autoComplete="off"
             value={draft.name}
+            readOnly={pending}
             onChange={(event) => change('name', event.target.value)}
             onBlur={() => commit('name')}
             onKeyDown={(event) => commitOnEnter(event, 'name')}
@@ -189,6 +190,7 @@ function ProjectInfo({ project }: { project: Project }) {
             maxLength={120}
             autoComplete="off"
             value={draft.description}
+            readOnly={pending}
             onChange={(event) => change('description', event.target.value)}
             onBlur={() => commit('description')}
             onKeyDown={(event) => commitOnEnter(event, 'description')}

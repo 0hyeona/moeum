@@ -264,11 +264,13 @@ export function ChangesPage() {
             </div>
           </section>
 
-          {analysisError && <p role="alert">{analysisError}</p>}
-
-          <button type="button" className={`${ui.primaryButton} ${styles.analyzeButton}`} disabled={analyzing || selectedChanges.length === 0 || selectedChanges.length > 20} onClick={startAnalysis}>
-            {analyzing ? '분석 중…' : 'Story 분석'}
-          </button>
+          <div className={styles.analysisActions}>
+            {analysisError && <p className={styles.analysisError} role="alert">{analysisError}</p>}
+            <p className={styles.selectionCount} role="status">선택 <strong>{selectedChanges.length}</strong>/20</p>
+            <button type="button" className={`${ui.primaryButton} ${styles.analyzeButton}`} disabled={analyzing || selectedChanges.length === 0 || selectedChanges.length > 20} onClick={startAnalysis}>
+              {analyzing ? '분석 중…' : 'Story 분석'}
+            </button>
+          </div>
         </div>
       </div>
     </div>

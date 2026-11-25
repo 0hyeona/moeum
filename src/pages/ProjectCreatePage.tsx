@@ -31,31 +31,31 @@ export function ProjectCreatePage() {
   const [figmaError, setFigmaError] = useState('');
   const [notionPage, setNotionPage] = useState('');
   const [notionError, setNotionError] = useState('');
-  const [connected, setConnected] = useState<Service[]>([]);
+  const [verifiedUrls, setVerifiedUrls] = useState<Service[]>([]);
   const [pending, setPending] = useState(false);
   const [submitError, setSubmitError] = useState('');
 
-  function setConnection(service: Service, on: boolean) {
-    setConnected((current) => on ? [...current.filter((item) => item !== service), service] : current.filter((item) => item !== service));
+  function setUrlVerified(service: Service, on: boolean) {
+    setVerifiedUrls((current) => on ? [...current.filter((item) => item !== service), service] : current.filter((item) => item !== service));
   }
 
-  function connectGithub() {
+  function verifyGithubUrl() {
     const valid = githubRepository(githubUrl) !== null;
     setGithubError(valid ? '' : 'https://github.com/소유자/저장소 형식의 URL을 입력해주세요.');
-    setConnection('GitHub', valid);
+    setUrlVerified('GitHub', valid);
   }
 
-  function connectFigma() {
+  function verifyFigmaUrl() {
     const valid = isFigmaFileUrl(figmaUrl);
     setFigmaError(valid ? '' : 'https://www.figma.com/design/… 형식의 파일 URL을 입력해주세요.');
-    setConnection('Figma', valid);
+    setUrlVerified('Figma', valid);
   }
 
-  function connectNotion() {
+  function verifyNotionUrl() {
     let valid = false;
     try { const url = new URL(notionPage.trim()); valid = url.protocol === 'https:' && /(^|\.)(notion\.so|notion\.site|notion\.com)$/.test(url.hostname); } catch { /* Invalid URL. */ }
     setNotionError(valid ? '' : '올바른 Notion 페이지 URL을 입력해주세요.');
-    setConnection('Notion', valid);
+    setUrlVerified('Notion', valid);
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -66,8 +66,8 @@ export function ProjectCreatePage() {
       nameInput.current?.focus();
       return;
     }
-    if ((githubUrl.trim() && !connected.includes('GitHub')) || (figmaUrl.trim() && !connected.includes('Figma')) || (notionPage.trim() && !connected.includes('Notion'))) {
-      setSubmitError('입력한 URL의 연결 버튼을 눌러 확인해주세요.');
+    if ((githubUrl.trim() && !verifiedUrls.includes('GitHub')) || (figmaUrl.trim() && !verifiedUrls.includes('Figma')) || (notionPage.trim() && !verifiedUrls.includes('Notion'))) {
+      setSubmitError('입력한 URL의 ‘형식 확인’ 버튼을 눌러주세요.');
       return;
     }
     setPending(true);
@@ -82,7 +82,7 @@ export function ProjectCreatePage() {
 
   return (
     <div className={styles.page}>
-      <PageHeading title="프로젝트 생성" description="새로운 프로젝트와 작업 도구를 연결해주세요." />
+      <PageHeading title="프로젝트 생성" description="새 프로젝트와 사용할 작업 도구의 URL을 등록해주세요." />
       <form className={styles.form} onSubmit={submit} noValidate>
         <fieldset className={styles.panel} disabled={pending}>
           <div className={styles.field}>
@@ -95,15 +95,16 @@ export function ProjectCreatePage() {
             <input id="project-description" className={styles.input} placeholder="AI Project Journal" maxLength={120} autoComplete="off" value={description} onChange={(event) => setDescription(event.target.value)} />
           </div>
           <div className={styles.connections}>
-            <Connection service="GitHub" controlId="github-url" connected={connected.includes('GitHub')} error={githubError} onConnect={connectGithub}>
-              <input id="github-url" className={styles.input} type="url" inputMode="url" placeholder="https://github.com/owner/repository" autoComplete="off" spellCheck={false} value={githubUrl} onChange={(event) => { setGithubUrl(event.target.value); setGithubError(''); setConnection('GitHub', false); }} aria-invalid={!!githubError} aria-describedby={githubError ? 'github-url-error' : undefined} />
-            </Connection>
-            <Connection service="Figma" controlId="figma-url" connected={connected.includes('Figma')} error={figmaError} onConnect={connectFigma}>
-              <input id="figma-url" className={styles.input} type="url" inputMode="url" placeholder="URL 입력" autoComplete="off" spellCheck={false} value={figmaUrl} onChange={(event) => { setFigmaUrl(event.target.value); setFigmaError(''); setConnection('Figma', false); }} aria-invalid={!!figmaError} aria-describedby={figmaError ? 'figma-url-error' : undefined} />
-            </Connection>
-            <Connection service="Notion" controlId="notion-page" connected={connected.includes('Notion')} error={notionError} onConnect={connectNotion}>
-              <input id="notion-page" className={styles.input} type="url" inputMode="url" placeholder="Notion 페이지 URL 입력" autoComplete="off" value={notionPage} onChange={(event) => { setNotionPage(event.target.value); setNotionError(''); setConnection('Notion', false); }} aria-invalid={!!notionError} aria-describedby={notionError ? 'notion-page-error' : undefined} />
-            </Connection>
+            <p className={styles.connectionHint}>URL 형식만 확인해요. 실제 접근 권한과 계정 연결은 프로젝트 생성 후 설정에서 확인해주세요.</p>
+            <UrlVerification service="GitHub" controlId="github-url" verified={verifiedUrls.includes('GitHub')} error={githubError} onVerify={verifyGithubUrl}>
+              <input id="github-url" className={styles.input} type="url" inputMode="url" placeholder="https://github.com/owner/repository" autoComplete="off" spellCheck={false} value={githubUrl} onChange={(event) => { setGithubUrl(event.target.value); setGithubError(''); setUrlVerified('GitHub', false); }} aria-invalid={!!githubError} aria-describedby={githubError ? 'github-url-error' : undefined} />
+            </UrlVerification>
+            <UrlVerification service="Figma" controlId="figma-url" verified={verifiedUrls.includes('Figma')} error={figmaError} onVerify={verifyFigmaUrl}>
+              <input id="figma-url" className={styles.input} type="url" inputMode="url" placeholder="URL 입력" autoComplete="off" spellCheck={false} value={figmaUrl} onChange={(event) => { setFigmaUrl(event.target.value); setFigmaError(''); setUrlVerified('Figma', false); }} aria-invalid={!!figmaError} aria-describedby={figmaError ? 'figma-url-error' : undefined} />
+            </UrlVerification>
+            <UrlVerification service="Notion" controlId="notion-page" verified={verifiedUrls.includes('Notion')} error={notionError} onVerify={verifyNotionUrl}>
+              <input id="notion-page" className={styles.input} type="url" inputMode="url" placeholder="Notion 페이지 URL 입력" autoComplete="off" value={notionPage} onChange={(event) => { setNotionPage(event.target.value); setNotionError(''); setUrlVerified('Notion', false); }} aria-invalid={!!notionError} aria-describedby={notionError ? 'notion-page-error' : undefined} />
+            </UrlVerification>
           </div>
         </fieldset>
         {submitError && <p className={styles.error} role="alert">{submitError}</p>}
@@ -113,9 +114,9 @@ export function ProjectCreatePage() {
   );
 }
 
-type ConnectionProps = { service: Service; controlId: string; connected: boolean; error: string; onConnect: () => void; children: ReactNode };
+type UrlVerificationProps = { service: Service; controlId: string; verified: boolean; error: string; onVerify: () => void; children: ReactNode };
 
-function Connection({ service, controlId, connected, error, onConnect, children }: ConnectionProps) {
+function UrlVerification({ service, controlId, verified, error, onVerify, children }: UrlVerificationProps) {
   return (
     <div className={styles.connection}>
       <label htmlFor={controlId} className={styles.connectionTitle}>
@@ -123,11 +124,11 @@ function Connection({ service, controlId, connected, error, onConnect, children 
         {service}
       </label>
       {children}
-      <button type="button" className={`${styles.connectButton} ${connected ? styles.connected : ''}`} onClick={onConnect} aria-describedby={`${controlId}-status`}>
-        {connected ? '연결됨' : '연결'}
+      <button type="button" className={`${styles.connectButton} ${verified ? styles.connected : ''}`} onClick={onVerify} aria-label={`${service} URL ${verified ? '형식 확인됨' : '형식 확인'}`} aria-describedby={`${controlId}-status`}>
+        {verified ? '형식 확인됨' : '형식 확인'}
       </button>
       {error && <p className={styles.error} id={`${controlId}-error`} role="alert">{error}</p>}
-      <span className={ui.visuallyHidden} id={`${controlId}-status`} role="status">{connected ? `${service} 연결됨` : ''}</span>
+      <span className={ui.visuallyHidden} id={`${controlId}-status`} role="status">{verified ? `${service} URL 형식을 확인했어요. 접근 권한과 계정 연결은 설정에서 확인해주세요.` : ''}</span>
     </div>
   );
 }

@@ -43,21 +43,30 @@
 .panel { min-width: 0; padding: 32px; border: 1px solid var(--color-border); border-radius: var(--radius-control); background: var(--color-surface); }
 .panel h2 { margin: 0; font-size: 25px; line-height: 30px; font-weight: 700; }
 .selectedPanel { min-height: 0; flex: 0 1 auto; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
-.side > .panel:not(.selectedPanel), .side > .analyzeButton { flex-shrink: 0; }
+.side > .panel:not(.selectedPanel), .side > .analysisActions { flex-shrink: 0; }
 .selectedPanel > .empty { min-height: min(240px, 24dvh); display: grid; place-items: center; }
 .selectedList { margin: 32px 0 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .selectedItem { min-width: 0; display: flex; flex-direction: column; }
 .selectedItem > * { flex: 1; }
 .modes { margin-top: 32px; }
-.analyzeButton { align-self: flex-end; margin-top: 12px; }
+.analysisActions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+.analysisError { flex-basis: 100%; margin: 0; color: var(--color-error); font-size: 14px; line-height: 20px; overflow-wrap: anywhere; }
+.selectionCount { display: none; }
+.analyzeButton { align-self: flex-end; }
 
 @media (max-width: 1439px) {
   .layout { grid-template-columns: minmax(0, 1fr); gap: 24px; padding: 0 48px; }
   .side { position: static; height: auto; max-height: none; justify-content: flex-start; }
   .selectedPanel { min-height: 0; }
+  .page { padding-bottom: calc(176px + env(safe-area-inset-bottom)); }
+  .page :is(button, input, summary, a, [tabindex]) { scroll-margin-bottom: calc(160px + env(safe-area-inset-bottom)); }
+  .analysisActions { position: fixed; z-index: 8; inset: auto 0 0; margin: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 200px); align-items: center; padding: 12px max(16px, env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); border-top: 1px solid var(--color-border-strong); background: var(--color-surface); box-shadow: 0 -4px 16px rgb(27 34 69 / 6%); }
+  .selectionCount { display: block; margin: 0; font-size: 14px; line-height: 20px; color: var(--color-muted); }
+  .selectionCount strong { color: var(--color-text-strong); }
+  .analysisError { grid-column: 1 / -1; max-height: 40px; overflow-y: auto; }
+  .analyzeButton { width: 100%; min-height: 44px; }
 }
 @media (max-width: 700px) {
-  .page { padding-bottom: 48px; }
   .layout { gap: 16px; padding: 0 16px; }
   .toolbar { flex-direction: column; gap: 8px; }
   .search { flex: none; }
@@ -103,7 +112,6 @@
   .filters > * { min-width: 0; max-width: 100%; }
 }
 @media (max-width: 402px) {
-  .page { padding-bottom: 64px; }
   .layout { padding-inline: 12px; gap: 12px; }
   .feed { gap: 8px; margin-top: 12px; }
   .cardBody { padding: 12px; }

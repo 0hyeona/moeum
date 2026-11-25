@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { createContext, startTransition, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { type Analysis, type AnalysisMode, type Project, type Service, type StoryFields } from '../data/projects';
 import * as projectApi from '../api/projects';
 import { useGithubActivities } from './useGithubActivities';
@@ -15,6 +15,7 @@ import { useFigmaActivities } from './useFigmaActivities';
 import { useStoryStore } from './useStoryStore';
 import { analyzeActivities, type ServerStoryStatus } from '../api/stories';
 import { storyDraftFromAnalysis } from '../data/storyDraft';
+import { readAnalysisDraft, removeAnalysisDraft, saveAnalysisDraft } from '../data/analysisDraft';
 
 export type NewProject = { name: string; description: string; urls: Record<Service, string> };
 
@@ -45,7 +46,12 @@ function useProjectsState() {
       setProjects(next);
       let remembered: string | null = null;
       try { remembered = sessionStorage.getItem(selectionKey); } catch { /* Selection storage is optional. */ }
-      setActiveProjectId(next.find(project => project.id === remembered)?.id ?? next[0]?.id ?? null);
+      const id = next.find(project => project.id === remembered)?.id ?? next[0]?.id ?? null;
+      const restored = id ? readAnalysisDraft(user.id, id) : null;
+      setAnalysis(restored);
+      setSelectedChangeIds(restored?.changeIds ?? []);
+      setMode(restored?.mode ?? '의미 중심');
+      setActiveProjectId(id);
     }).catch(error => {
       if (!controller.signal.aborted && error instanceof ApiError && error.status === 401) {
         clearAccessToken();
@@ -56,7 +62,7 @@ function useProjectsState() {
       if (!controller.signal.aborted) setLoading(false);
     });
     return () => controller.abort();
-  }, [attempt, selectionKey]);
+  }, [attempt, selectionKey, user.id]);
   useEffect(() => {
     if (loading || loadError) return;
     try {
@@ -64,10 +70,14 @@ function useProjectsState() {
       else sessionStorage.removeItem(selectionKey);
     } catch { /* Selection storage is optional. */ }
   }, [activeProjectId, loading, loadError, selectionKey]);
-  // s5에서 고른 변경사항과 분석 방식, s6 분석 결과. 프로젝트를 바꾸면 초기화됩니다.
+  // 분석 수정 내용은 같은 탭에서 계정·프로젝트별로 복원합니다.
   const [selectedChangeIds, setSelectedChangeIds] = useState<string[]>([]);
   const [mode, setMode] = useState<AnalysisMode>('의미 중심');
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
+  const [analysisSaved, setAnalysisSaved] = useState(true);
+  useEffect(() => {
+    if (analysis) setAnalysisSaved(saveAnalysisDraft(user.id, analysis));
+  }, [analysis, user.id]);
   const [storyDrafts, setStoryDrafts] = useState<Record<string, Record<string, Partial<StoryFields>>>>({});
   const activeProject = projects.find((project) => project.id === activeProjectId);
   const storyStore = useStoryStore(activeProjectId, setProjects);
@@ -149,11 +159,17 @@ function useProjectsState() {
   const selectProject = useCallback((id: string) => {
     if (id === activeProjectId) return;
     analysisRequest.current?.abort();
-    setActiveProjectId(id);
-    setSelectedChangeIds(todaysChangeIds(projects.find((project) => project.id === id)));
-    setMode('의미 중심');
-    setAnalysis(null);
-  }, [activeProjectId, projects]);
+    try { sessionStorage.setItem(selectionKey, id); } catch { /* Selection storage is optional. */ }
+    const restored = readAnalysisDraft(user.id, id);
+    // 프로젝트와 라우터 이동을 함께 반영해 이전 분석 화면의 리다이렉트를 막습니다.
+    startTransition(() => {
+      setActiveProjectId(id);
+      setSelectedChangeIds(restored?.changeIds ?? todaysChangeIds(projects.find((project) => project.id === id)));
+      setMode(restored?.mode ?? '의미 중심');
+      setAnalysis(restored);
+      setAnalysisSaved(true);
+    });
+  }, [activeProjectId, projects, selectionKey, user.id]);
 
   async function createProject({ name, description, urls }: NewProject) {
     const data = await projectApi.createProject({ project_name: name, description,
@@ -192,6 +208,7 @@ function useProjectsState() {
   async function deleteProject() {
     if (!activeProjectId) throw new Error('프로젝트를 선택해주세요.');
     await enqueue(() => projectApi.deleteProject(activeProjectId));
+    removeAnalysisDraft(user.id, activeProjectId);
     if (activeProjectId) {
       setStoryDrafts((current) => {
         const next = { ...current };
@@ -250,8 +267,10 @@ function useProjectsState() {
   }
   const clearAnalysis = useCallback(() => {
     analysisRequest.current?.abort();
+    if (activeProjectId) removeAnalysisDraft(user.id, activeProjectId);
     setAnalysis(null);
-  }, []);
+    setAnalysisSaved(true);
+  }, [activeProjectId, user.id]);
   async function createStoryDraft(fields?: StoryFields) {
     if (!activeProject) throw new Error('프로젝트를 선택해주세요.');
     const selected = !fields && analysis?.projectId === activeProject.id ? analysis : null;
@@ -259,7 +278,10 @@ function useProjectsState() {
     if (selected && changes.length !== selected.changeIds.length) throw new Error('선택한 변경사항이 달라졌어요. 변경사항을 다시 선택해주세요.');
     const values = fields ?? storyDraftFromAnalysis(selected);
     const story = await storyStore.createDraft(activeProject.id, values, changes);
-    setSelectedChangeIds([]);
+    startTransition(() => {
+      setSelectedChangeIds([]);
+      if (selected) clearAnalysis();
+    });
     return story.id;
   }
   async function saveStory(fields: Partial<StoryFields>, id: string, status?: ServerStoryStatus) {
@@ -303,6 +325,7 @@ function useProjectsState() {
     mode,
     setMode,
     analysis,
+    analysisSaved,
     analyze,
     updateAnalysis,
     clearAnalysis,
