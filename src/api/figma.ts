@@ -74,7 +74,7 @@ export function completeFigmaConnection(query: string): Promise<{ returnTo: stri
   const params = new URLSearchParams(query);
   if (params.has('error')) {
     sessionStorage.removeItem(PENDING_KEY);
-    return Promise.reject(new Error('Figma 연결 승인이 취소됐어요. 설정에서 다시 연결할 수 있어요.'));
+    return Promise.reject(new Error('Figma 연결 승인이 취소됐어요. 대시보드에서 다시 연결할 수 있어요.'));
   }
   const code = params.get('code');
   const state = params.get('state');

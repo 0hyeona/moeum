@@ -203,7 +203,7 @@ export function ChangesPage() {
               <div className={styles.noticeIcon}><ServiceIcon service={item} /></div>
               <div className={styles.noticeContent}><div className={styles.noticeTitle}><strong>{item}</strong><span>{state.status === 'error' ? '불러오기 실패' : state.status === 'disconnected' ? '연결 필요' : state.status === 'ready' ? '수집 완료' : '불러오는 중'}</span></div>
               <p>{state.status === 'loading' ? '변경사항을 수집·조회하고 있어요…' : state.status === 'pending' ? '변경사항 조회를 준비하고 있어요.' : state.status === 'disconnected' ? '서비스를 연결하면 변경사항을 모아볼 수 있어요.' : state.status === 'ready' ? `미정리 변경사항 ${project.changes.filter(change => change.service === item).length}개` : state.error}</p></div>
-              {item === 'Notion' && state.status === 'error' && <Link className={styles.textButton} to="/settings#notion-account">Notion 연결 설정</Link>}
+              {item === 'Notion' && state.status === 'error' && <Link className={styles.textButton} to="/dashboard">대시보드에서 Notion 연결 확인</Link>}
               {item !== 'Figma' && state.status === 'error' && <button type="button" className={styles.textButton} onClick={() => refreshActivities(item)}>다시 시도</button>}
               {service === 'all' && item !== 'Figma' && (state.status === 'ready' || state.status === 'loading') && <button type="button" className={styles.textButton} disabled={state.status === 'loading'} onClick={() => refreshActivities(item)}>새로고침</button>}
               {state.status === 'disconnected' && <Link className={styles.textButton} to={'/settings#settings-url-' + item}>연결하기</Link>}

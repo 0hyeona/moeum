@@ -6,9 +6,6 @@ import { getConnections, type Connection } from '../api/projects';
 import { githubRepository } from '../data/github';
 import { useProjects } from '../state/ProjectsContext';
 import { ConfirmDialog } from '../components/ConfirmDialog';
-import { NotionConnection } from '../components/NotionConnection';
-import { FigmaConnection } from '../components/FigmaConnection';
-import { FigmaLiveConnection } from '../components/FigmaLiveConnection';
 import { PageHeading, ServiceIcon, useDocumentTitle } from '../components/ui';
 import form from '../components/form.module.css';
 import ui from '../components/ui.module.css';
@@ -265,9 +262,6 @@ function Connections({ project }: { project: Project }) {
 
   return <section className={styles.panel} aria-labelledby="tools-heading">
     <SectionHeader id="tools-heading" title="연동 서비스" description="프로젝트에서 사용할 작업 도구의 URL을 관리합니다." />
-    <NotionConnection />
-    <FigmaConnection pluginConnectionId={project.urls?.Figma ? `figma-live-${project.id}` : undefined} />
-    {project.urls?.Figma && <FigmaLiveConnection key={project.urls.Figma} projectId={project.id} fileUrl={project.urls.Figma} />}
     <StatusText message={message} />
     {error && <p className={form.error} role="alert">{error}</p>}
     {loadFailed && <button onClick={() => setAttempt(value => value + 1)}>다시 시도</button>}
@@ -276,7 +270,7 @@ function Connections({ project }: { project: Project }) {
       <ul className={styles.services}>
         {settingServices.map(service => {
           const connection = connections?.find(item => item.source === service.toLowerCase());
-          return <li key={service} className={styles.service}>
+          return <li key={service} id={`${service.toLowerCase()}-account`} className={styles.service}>
           <div className={styles.serviceInfo}>
             <div className={styles.serviceHeading}><label htmlFor={'settings-url-' + service} className={styles.serviceName}><ServiceIcon service={service} />{service}</label><span className={styles.connectionBadge}>{connection ? connectionLabels[connection.connection_status] : '—'}</span></div>
             <input id={'settings-url-' + service} type="url" inputMode="url" autoComplete="off" spellCheck={false}
