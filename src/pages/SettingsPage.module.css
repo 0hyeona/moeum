@@ -101,5 +101,4 @@
   .alertTitle img { width: 18px; height: 18px; }
   .alert .alertText { margin-top: 6px; font-size: 12px; line-height: 18px; }
   .deleteButton { min-height: 44px; }
-  .page :global(#notion-account) p { margin-block: 8px; font-size: 12px; line-height: 18px; }
 }
