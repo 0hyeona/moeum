@@ -4,12 +4,12 @@
 .panel::backdrop { background: rgb(18 28 52 / 42%); }
 .panel button { max-width: 100%; white-space: normal; }
 .header { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 20px 24px 16px; border-bottom: 1px solid #edf0f7; background: #fff; }
-.eyebrow { color: #526acb; font-size: 11px; font-weight: 700; letter-spacing: .09em; }
+.eyebrow { color: var(--color-primary-hover); font-size: 11px; font-weight: 700; letter-spacing: .09em; }
 .panel .header h2 { margin: 2px 0 0; font-size: 22px; line-height: 30px; }
 .header button { min-width: 40px; min-height: 40px; font-size: 26px; }
 .body { padding: 8px 24px 24px; }
 .panel p { margin: 8px 0; }
-.status { padding: 14px 16px; margin: 16px 0 24px; border: 1px solid #dce3ff; border-radius: 10px; background: #f4f6ff; }
+.status { padding: 14px 16px; margin: 16px 0 24px; border: 1px solid color-mix(in srgb, var(--color-primary) 28%, white); border-radius: 10px; background: var(--color-selected); }
 .status p { margin: 4px 0 0; font-size: 13px; }
 .status[data-state='connected'], .status[data-state='baseline'] { color: #246347; background: #effaf3; border-color: #bde4cd; }
 .status[data-state='error'], .status[data-state='expired'], .status[data-state='code-expired'] { color: #923a2c; background: #fff5ef; border-color: #f2cfbb; }
@@ -17,11 +17,14 @@
 .steps > li { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 12px; padding-bottom: 24px; }
 .steps > li + li { border-top: 1px solid #edf0f7; padding-top: 24px; }
 .steps h3 { margin: 1px 0 8px; font-size: 16px; line-height: 26px; }
-.number { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: #edf1ff; color: #425ac3; font-weight: 700; }
-.panel a { color: #405bc7; text-underline-offset: 3px; }
+.number { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: color-mix(in srgb, var(--color-primary) 12%, white); color: var(--color-primary-hover); font-weight: 700; }
+.panel a { color: var(--color-link); text-underline-offset: 3px; }
+.steps .pairingStep h3 { margin-bottom: 12px; }
+.pairingStep h3 + p { margin-bottom: 12px; }
+.checkButton { margin-top: 8px; }
 .panel .menu { padding: 10px 12px; background: #f6f7fb; border-radius: 8px; font-size: 13px; }
 .menu b { padding-inline: 3px; color: #838da5; }
-.panel code { padding: 2px 4px; border-radius: 4px; background: #edf1ff; font-size: 12px; }
+.panel code { padding: 2px 4px; border-radius: 4px; background: var(--color-selected); font-size: 12px; }
 .hint { color: #66728b; font-size: 12px; }
 .field { margin-top: 14px; }
 .field label { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 8px; font-size: 12px; font-weight: 600; margin-bottom: 6px; }

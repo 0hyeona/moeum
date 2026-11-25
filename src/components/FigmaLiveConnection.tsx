@@ -138,7 +138,7 @@ function FigmaLiveConnectionView({ projectId, fileUrl, onEnabled }: Props) {
             <p className={styles.hint}>설치했다면 플러그인 › 개발 › ‘모음 실시간 연결’을 실행하세요. 웹 브라우저에서는 개발 플러그인을 가져올 수 없어요.</p>
             <p className={styles.hint}>이 플러그인은 별도의 Google 계정 연결이나 Figma OAuth 승인이 필요하지 않아요.</p>
           </div></li>
-          <li><span className={styles.number}>2</span><div>
+          <li className={styles.pairingStep}><span className={styles.number}>2</span><div>
             <h3>연결 코드와 파일 공유 링크 입력</h3>
             <p>대시보드 › Figma 실시간 연결 관리에서 코드를 만든 뒤, Figma 플러그인에 아래 두 값을 붙여 넣으세요.</p>
             <button type="button" className={ui.secondaryButton} disabled={busy || !fileUrl} onClick={() => void create()}>{busy ? '처리 중…' : '새 연결 코드 생성'}</button>
@@ -159,7 +159,7 @@ function FigmaLiveConnectionView({ projectId, fileUrl, onEnabled }: Props) {
             {connection?.last_received_at && <p className={styles.received}>마지막 전송: {new Date(connection.last_received_at).toLocaleString('ko-KR')}</p>}
             <p className={styles.hint}>첫 전송은 비교 기준만 저장해요. 이후 편집은 약 1초 동안 묶어 변경사항으로 추가해요. 대시보드에서 새로고침해 확인하세요.</p>
             <p className={styles.hint}>Figma 플러그인 창을 계속 열어 두세요. 연결은 최대 8시간 유지돼요.</p>
-            <button type="button" className={ui.ghostButton} disabled={busy} onClick={() => setRevision(value => value + 1)}>연결 상태 다시 확인</button>
+            <button type="button" className={`${ui.primaryButton} ${styles.checkButton}`} disabled={busy} onClick={() => setRevision(value => value + 1)}>연결 상태 다시 확인</button>
           </div></li>
         </ol>
         {error && <p role="alert" className={styles.error}>{error}</p>}
