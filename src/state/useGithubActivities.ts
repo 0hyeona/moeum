@@ -17,12 +17,7 @@ export function useGithubActivities(project: Project | undefined, setProjects: D
     try {
       if (sync) await syncGithubActivities(id, controller.signal);
 
-      let activities = await readGithubActivities(id, url, controller.signal);
-
-      if (!sync && !controller.signal.aborted && activities.commits.length === 0) {
-        await syncGithubActivities(id, controller.signal);
-        activities = await readGithubActivities(id, url, controller.signal);
-      }
+      const activities = await readGithubActivities(id, url, controller.signal);
 
       const { commits, changes } = activities;
       if (controller.signal.aborted) return;

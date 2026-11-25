@@ -104,6 +104,7 @@ export function ProjectCreatePage() {
             <Connection service="Notion" controlId="notion-page" connected={connected.includes('Notion')} error={notionError} onConnect={connectNotion}>
               <input id="notion-page" className={styles.input} type="url" inputMode="url" placeholder="Notion 페이지 URL 입력" autoComplete="off" value={notionPage} onChange={(event) => { setNotionPage(event.target.value); setNotionError(''); setConnection('Notion', false); }} aria-invalid={!!notionError} aria-describedby={notionError ? 'notion-page-error' : undefined} />
             </Connection>
+            <p className={styles.connectionHint}>URL 확인 후 프로젝트를 생성하세요. Notion은 대시보드에서 계정과 읽을 페이지를 승인하고, Figma는 ‘실시간 연결 관리’에서 플러그인을 연결하면 변경사항을 가져올 수 있어요.</p>
           </div>
         </fieldset>
         {submitError && <p className={styles.error} role="alert">{submitError}</p>}
@@ -124,10 +125,10 @@ function Connection({ service, controlId, connected, error, onConnect, children 
       </label>
       {children}
       <button type="button" className={`${styles.connectButton} ${connected ? styles.connected : ''}`} onClick={onConnect} aria-describedby={`${controlId}-status`}>
-        {connected ? '연결됨' : '연결'}
+        {connected ? 'URL 확인됨' : 'URL 확인'}
       </button>
       {error && <p className={styles.error} id={`${controlId}-error`} role="alert">{error}</p>}
-      <span className={ui.visuallyHidden} id={`${controlId}-status`} role="status">{connected ? `${service} 연결됨` : ''}</span>
+      <span className={ui.visuallyHidden} id={`${controlId}-status`} role="status">{connected ? `${service} URL 형식 확인됨. 계정 및 파일 접근 권한은 별도로 승인해야 합니다.` : ''}</span>
     </div>
   );
 }

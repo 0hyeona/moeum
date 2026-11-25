@@ -23,6 +23,7 @@
 .error { margin: 0; color: var(--color-error); font-size: 13px; line-height: 20px; }
 
 .connections { display: flex; flex-direction: column; gap: 20px; }
+.connectionHint { margin: 0; color: var(--color-subtle); font-size: 13px; line-height: 1.7; }
 .connection {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

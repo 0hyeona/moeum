@@ -52,6 +52,7 @@ export function FigmaConnection({ compact = false, returnTo = '/settings#figma-a
   if (loading) return <span role="status">Figma 계정 확인 중…</span>;
   const connected = connection?.connected && Boolean(connection.figma_user_id);
   if (compact && connected && !error) return null;
+  if (compact && pluginConnectionId) return <p>아래 ‘Figma 실시간 연결 관리’에서 플러그인을 연결해 주세요.</p>;
 
   const button = <button type="button" className={buttonClassName ?? ui.secondaryButton}
     disabled={pending} onClick={() => void connect()}>
@@ -70,7 +71,11 @@ export function FigmaConnection({ compact = false, returnTo = '/settings#figma-a
 
   return <div id="figma-account" style={{ marginBlock: 16 }}>
     <p role="status">{connected ? 'Figma 계정이 연결됐어요.' : 'Figma 계정을 연결하면 등록한 파일의 변경사항을 가져올 수 있어요.'}</p>
-    {button}
+    <p>실시간 플러그인은 ‘Figma 실시간 연결 관리’에서 연결하세요. Google 계정 연결은 필요하지 않아요.</p>
+    <details><summary>Figma 계정 연결 (버전 기록 조회용 · 선택 사항)</summary>
+      <p>OAuth 앱을 찾을 수 없다는 오류가 나오면 앱 관리자에게 문의해 주세요. 실시간 플러그인은 이 승인 없이 사용할 수 있어요.</p>
+      {button}
+    </details>
     {feedback}
   </div>;
 }

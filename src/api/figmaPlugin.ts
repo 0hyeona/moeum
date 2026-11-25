@@ -17,7 +17,8 @@ function options(signal?: AbortSignal): RequestInit {
 const path = (projectId: string) => `/api/projects/${encodeURIComponent(projectId)}/figma/plugin`;
 
 export function getFigmaPluginStatus(projectId: string, signal?: AbortSignal): Promise<FigmaPluginStatus> {
-  return apiRequest(path(projectId), options(signal));
+  const timeout = AbortSignal.timeout(15000);
+  return apiRequest(path(projectId), options(signal ? AbortSignal.any([signal, timeout]) : timeout));
 }
 export function createFigmaPairing(projectId: string): Promise<FigmaPairing> {
   return apiRequest(path(projectId) + '/pairing', { ...options(AbortSignal.timeout(30000)), method: 'POST' });
