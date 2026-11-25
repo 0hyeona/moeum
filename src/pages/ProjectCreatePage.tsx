@@ -95,7 +95,7 @@ export function ProjectCreatePage() {
             <input id="project-description" className={styles.input} placeholder="AI Project Journal" maxLength={120} autoComplete="off" value={description} onChange={(event) => setDescription(event.target.value)} />
           </div>
           <div className={styles.connections}>
-            <p className={styles.connectionHint}>URL 형식만 확인해요. 실제 접근 권한과 계정 연결은 프로젝트 생성 후 설정에서 확인해주세요.</p>
+            <p className={styles.connectionHint}>URL 형식만 확인해요. Notion은 프로젝트 생성 후 계정과 읽을 페이지를 승인하고, Figma는 ‘실시간 연결 관리’에서 플러그인을 연결해주세요.</p>
             <UrlVerification service="GitHub" controlId="github-url" verified={verifiedUrls.includes('GitHub')} error={githubError} onVerify={verifyGithubUrl}>
               <input id="github-url" className={styles.input} type="url" inputMode="url" placeholder="https://github.com/owner/repository" autoComplete="off" spellCheck={false} value={githubUrl} onChange={(event) => { setGithubUrl(event.target.value); setGithubError(''); setUrlVerified('GitHub', false); }} aria-invalid={!!githubError} aria-describedby={githubError ? 'github-url-error' : undefined} />
             </UrlVerification>

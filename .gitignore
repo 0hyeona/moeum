@@ -5,3 +5,8 @@ dist/
 .env
 .env.*
 !.env.example
+
+# Temporary workspaces
+.backend-*/
+.cursor-work/
+.notion-frontend-stage/
