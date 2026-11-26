@@ -110,10 +110,8 @@ export function StoryAnalysisPage() {
             <ModeOptions value={analysis.mode} />
           </div>
           </div>
-          {missingChanges && <p role={loadingChanges ? 'status' : 'alert'}>{loadingChanges
-            ? '선택한 변경사항을 불러오고 있어요…'
-            : '선택한 변경사항을 확인할 수 없어요. 수정한 분석은 유지돼요. 변경사항 목록에서 연결 상태와 수집 결과를 확인해주세요.'}</p>}
-          {analyzing && <p role="status">남은 변경사항을 다시 분석하고 있어요…</p>}
+          {missingChanges && !loadingChanges && <p role="alert">선택한 변경사항을 확인할 수 없어요. 수정한 분석은 유지돼요. 변경사항 목록에서 연결 상태와 수집 결과를 확인해주세요.</p>}
+
           {analysisError && <p role="alert">{analysisError}</p>}
         </section>
 

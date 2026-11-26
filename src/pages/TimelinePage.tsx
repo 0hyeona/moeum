@@ -101,7 +101,7 @@ export function TimelinePage() {
       </div>
       <section className={styles.timeline} aria-label="날짜별 Story">
         <StoryLoadNotice />
-        <p className={styles.resultsCount} role="status">{storyListState.status === 'ready' ? <>검색 결과 <strong>{sortedStories.length}개</strong></> : 'Story 목록을 확인하고 있어요.'}</p>
+        {storyListState.status === 'ready' && <p className={styles.resultsCount} role="status">검색 결과 <strong>{sortedStories.length}개</strong></p>}
         {[...months].map(([month, days]) => <section className={styles.month} key={month} aria-label={month}>
           <h2 className={styles.monthHeading}>{Number(month.slice(0,4))}년 {Number(month.slice(5,7))}월</h2>
           {[...days].map(([date, stories]) => <div className={styles.day} key={date}>

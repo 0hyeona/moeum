@@ -49,7 +49,7 @@ export function FigmaConnection({ compact = false, returnTo = '/settings#figma-a
     }
   }
 
-  if (loading) return <span role="status">Figma 계정 확인 중…</span>;
+  if (loading) return null;
   const connected = connection?.connected && Boolean(connection.figma_user_id);
   if (compact && connected && !error) return null;
   if (compact && pluginConnectionId) return <p>아래 ‘Figma 실시간 연결 관리’에서 플러그인을 연결해 주세요.</p>;

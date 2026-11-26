@@ -22,32 +22,34 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: end;
-  gap: 8px 16px;
+  gap: 16px;
   min-height: 72px;
   padding: 20px;
   border: 1px solid var(--color-border);
   border-radius: 10px;
   background: var(--color-background);
 }
-.serviceInfo { min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+.serviceInfo { min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.serviceInfo input { height: 48px; }
 .serviceHeading { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
 .connectionBadge { padding: 3px 8px; border: 1px solid var(--color-border); border-radius: 6px; background: var(--color-surface); font-size: 12px; line-height: 18px; color: var(--color-muted); }
 .serviceInfo p { margin: 0; }
 .serviceName { display: flex; align-items: center; gap: 10px; font-size: 18px; line-height: 26px; font-weight: 600; }
 .serviceStatus { font-size: 16px; line-height: 22px; word-break: keep-all; }
 .reconnect { color: var(--color-error); }
-.serviceActions { display: flex; flex-wrap: wrap; gap: 8px; }
+.serviceActions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.serviceActions > button { min-height: 48px; height: 48px; padding: 10px 16px; font-size: 14px; line-height: 20px; }
 .smallButton { composes: primaryButton from '../components/ui.module.css'; }
 
 /* 위험 영역 */
 .dangerPanel { border-color: #efdcdc; }
-.danger { margin-top: 16px; padding-top: 16px; border-top: 1px solid #f2e7e7; display: flex; align-items: center; gap: 16px; }
-.alert { flex: 1 1 auto; min-width: 0; padding: 16px; border-radius: 8px; background: #fff7f7; color: #a8383c; }
+.danger { margin-top: 24px; padding-top: 24px; border-top: 1px solid #f2e7e7; display: flex; align-items: center; gap: 24px; }
+.alert { flex: 1 1 auto; min-width: 0; padding: 0; color: #a8383c; }
 .alert p { margin: 0; }
 .alertTitle { display: flex; align-items: center; gap: 8px; font-size: 16px; line-height: 24px; font-weight: 600; }
 .alertTitle img { flex: none; }
 .alert .alertText { margin-top: 8px; font-size: 16px; line-height: 24px; word-break: keep-all; }
-.deleteButton { flex: none; }
+.deleteButton { flex: none; min-height: 48px; padding: 10px 16px; font-size: 14px; line-height: 20px; }
 
 @media (max-width: 700px) {
   .page { padding: 0 16px 48px; }
@@ -63,6 +65,7 @@
   .serviceStatus { font-size: 14px; line-height: 20px; }
   .fields label { font-size: 16px; line-height: 24px; }
   .serviceActions > button { flex: 1; }
+  .serviceActions { width: 100%; }
   .danger { flex-direction: column; align-items: stretch; gap: 16px; }
   .alertTitle { font-size: 16px; line-height: 22px; }
   .alert .alertText { margin-top: 8px; font-size: 16px; line-height: 24px; }
@@ -94,9 +97,9 @@
   .connectionBadge { padding: 2px 6px; font-size: 12px; line-height: 18px; }
   .serviceStatus { font-size: 12px; line-height: 18px; }
   .serviceActions { gap: 6px; }
-  .serviceActions > button { min-height: 44px; font-size: 14px; padding: 8px 10px; }
+  .serviceActions > button { min-height: 44px; height: 44px; font-size: 14px; padding: 8px 10px; }
   .danger { margin-top: 12px; padding-top: 12px; gap: 12px; }
-  .alert { padding: 12px; }
+  .alert { padding: 0; }
   .alertTitle { gap: 6px; font-size: 14px; line-height: 20px; }
   .alertTitle img { width: 18px; height: 18px; }
   .alert .alertText { margin-top: 6px; font-size: 12px; line-height: 18px; }

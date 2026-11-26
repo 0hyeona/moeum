@@ -99,11 +99,13 @@
 .noticeActions { display: flex; flex-wrap: wrap; gap: 8px; }
 @media (max-width: 520px) { .serviceNotice { grid-template-columns: 32px minmax(0, 1fr); gap: 8px; } .noticeIcon { width: 32px; height: 32px; } .serviceNotice > .textButton, .noticeActions { grid-column: 2; justify-self: start; } }
 
-.selectedFilters { display: flex; flex: 1 0 100%; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
-.conditionChip { display: inline-flex; align-items: center; gap: 8px; min-width: 0; max-width: 100%; min-height: 44px; padding: 6px 10px; border: 1px solid #dce4ff; border-radius: 8px; background: var(--color-selected); color: var(--color-link); font-size: 12px; line-height: 18px; }
+.selectedFilters { display: flex; flex: 1 0 100%; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; padding-top: 4px; }
+.conditionChip { display: inline-flex; align-items: center; gap: 10px; min-width: 0; max-width: 100%; min-height: 36px; padding: 7px 14px; border: 1px solid color-mix(in srgb, var(--color-primary) 35%, white); border-radius: 999px; background: color-mix(in srgb, var(--color-primary) 12%, white); color: var(--color-link); font-size: 12px; font-weight: 500; line-height: 18px; }
+.conditionChip:hover { background: color-mix(in srgb, var(--color-primary) 16%, white); }
 .conditionChip span:first-child { min-width: 0; overflow-wrap: anywhere; text-align: left; }
 .conditionChip span:last-child { flex: none; }
-.resetFilters { min-height: 44px; padding: 6px 8px; border: 0; background: transparent; color: var(--color-muted); font-size: 12px; }
+.resetFilters { min-height: 36px; padding: 6px 10px; border: 0; border-radius: 8px; background: transparent; color: var(--color-muted); font-size: 12px; }
+.resetFilters:hover { color: var(--color-text-strong); background: var(--color-surface); }
 .resultsCount { flex: 1 0 100%; margin: 0; color: var(--color-muted); font-size: 12px; line-height: 18px; }
 .resultsCount strong { color: var(--color-text-strong); }
 @media (max-width: 700px) {
@@ -142,4 +144,8 @@
   .empty { padding: 16px 12px; font-size: 12px; line-height: 18px; }
   .selectedList, .modes { margin-top: 12px; }
   .restore, .textButton { font-size: 12px; line-height: 18px; }
+}
+
+@media (max-width: 700px) {
+  .conditionChip, .resetFilters { min-height: 40px; }
 }

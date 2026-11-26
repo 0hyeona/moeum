@@ -84,7 +84,7 @@ export function ChangesPage() {
   const waiting = visibleServices.some(item => ['pending', 'loading', 'error', 'disconnected'].includes(activityStates[item].status));
   const statusOptions: FilterOption<string>[] = [
     { value: 'all', label: '상태 전체' },
-    { value: '초안', label: '초안' }, { value: '진행중', label: '진행 중' }, { value: '완료', label: '완료' },
+    { value: '초안', label: '초안' }, { value: '완료', label: '완료' },
   ];
 
   const normalizedQuery = query.trim().toLowerCase();
@@ -179,6 +179,7 @@ export function ChangesPage() {
 
           {visibleServices.map(item => {
             const state = activityStates[item];
+            if (['pending', 'loading'].includes(state.status)) return null;
             if (service !== 'all' && (state.status === 'ready' || state.status === 'pending' || state.status === 'loading')) return null;
             if (item === 'Figma' && state.status !== 'disconnected') {
               const count = project.changes.filter(change => change.service === 'Figma').length;

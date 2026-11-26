@@ -16,7 +16,7 @@ export function ProjectListPage() {
 
   return (
     <div className={styles.page}>
-      <PageHeading title="프로젝트" description="프로젝트를 선택하거나 새로운 프로젝트를 만들어보세요." />
+      <PageHeading title="프로젝트" />
       <div className={styles.toolbar}>
         <SearchField className={styles.search} label="프로젝트 검색" placeholder="프로젝트명을 입력해주세요." value={query} onChange={setQuery} />
         <Link to="/projects/new" className={ui.primaryButton}>프로젝트 생성</Link>

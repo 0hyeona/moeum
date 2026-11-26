@@ -55,7 +55,7 @@ function ConnectedActivity({ url, state, commits, onRefresh }: Props) {
         <Link to="/settings#settings-url-GitHub">연결 설정 확인</Link>
       </div>
     </div>}
-    {loading && !recent.length ? <p className={styles.empty} role="status">GitHub 기록을 불러오는 중이에요…</p>
+    {loading && !recent.length ? null
       : !recent.length ? !error && <p className={styles.empty} role="status">{selectedBranch ? `${selectedBranch} 브랜치에 아직 커밋이 없어요.` : '저장된 GitHub 변경사항이 없어요. 새로고침을 눌러 커밋을 가져오세요.'}</p>
         : <>
           <div className={styles.tableScroll}>

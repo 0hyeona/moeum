@@ -82,20 +82,32 @@ export function ProjectCreatePage() {
 
   return (
     <div className={styles.page}>
-      <PageHeading title="프로젝트 생성" description="새 프로젝트와 사용할 작업 도구의 URL을 등록해주세요." />
+      <PageHeading title="프로젝트 생성" />
       <form className={styles.form} onSubmit={submit} noValidate>
-        <fieldset className={styles.panel} disabled={pending}>
+        <fieldset className={styles.panel} disabled={pending} aria-labelledby="create-info-heading">
+          <header className={styles.sectionHeader}>
+            <h2 id="create-info-heading">프로젝트 정보</h2>
+            <p>프로젝트 이름과 설명을 입력해주세요.</p>
+          </header>
+          <div className={styles.fields}>
           <div className={styles.field}>
-            <label htmlFor="project-name">프로젝트명 (필수)</label>
+            <label htmlFor="project-name">프로젝트명 <span className={styles.required}>필수</span></label>
             <input ref={nameInput} id="project-name" className={styles.input} placeholder="flowlog" maxLength={50} autoComplete="off" value={name} onChange={(event) => { setName(event.target.value); setNameError(''); }} aria-invalid={!!nameError} aria-describedby={nameError ? 'project-name-error' : undefined} required />
             {nameError && <p className={styles.error} id="project-name-error" role="alert">{nameError}</p>}
           </div>
           <div className={styles.field}>
-            <label htmlFor="project-description">프로젝트 설명</label>
+            <label htmlFor="project-description">프로젝트 설명 <span className={styles.optional}>선택</span></label>
             <input id="project-description" className={styles.input} placeholder="AI Project Journal" maxLength={120} autoComplete="off" value={description} onChange={(event) => setDescription(event.target.value)} />
           </div>
+          </div>
+        </fieldset>
+        <fieldset className={styles.panel} disabled={pending} aria-labelledby="create-tools-heading">
+          <header className={styles.sectionHeader}>
+            <h2 id="create-tools-heading">연동 서비스 <span className={styles.optional}>선택</span></h2>
+            <p>사용할 도구의 URL을 등록하세요. 나중에 설정에서 추가할 수 있어요.</p>
+          </header>
           <div className={styles.connections}>
-            <p className={styles.connectionHint}>URL 형식만 확인해요. Notion은 프로젝트 생성 후 계정과 읽을 페이지를 승인하고, Figma는 ‘실시간 연결 관리’에서 플러그인을 연결해주세요.</p>
+            <p className={styles.connectionHint}>지금은 URL 형식만 확인해요. 계정 승인과 Figma 플러그인 연결은 프로젝트 생성 후 진행해주세요.</p>
             <UrlVerification service="GitHub" controlId="github-url" verified={verifiedUrls.includes('GitHub')} error={githubError} onVerify={verifyGithubUrl}>
               <input id="github-url" className={styles.input} type="url" inputMode="url" placeholder="https://github.com/owner/repository" autoComplete="off" spellCheck={false} value={githubUrl} onChange={(event) => { setGithubUrl(event.target.value); setGithubError(''); setUrlVerified('GitHub', false); }} aria-invalid={!!githubError} aria-describedby={githubError ? 'github-url-error' : undefined} />
             </UrlVerification>

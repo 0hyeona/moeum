@@ -265,7 +265,7 @@ function Connections({ project }: { project: Project }) {
     <StatusText message={message} />
     {error && <p className={form.error} role="alert">{error}</p>}
     {loadFailed && <button onClick={() => setAttempt(value => value + 1)}>다시 시도</button>}
-    {!connections && !loadFailed && <p role="status">연결 정보를 불러오는 중이에요…</p>}
+
     <fieldset className={styles.fieldset} disabled={!connections || pending !== null} aria-busy={pending !== null}>
       <ul className={styles.services}>
         {settingServices.map(service => {
