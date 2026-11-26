@@ -14,9 +14,9 @@ export function useFigmaActivities(userId: number, project: Project | undefined,
   const reads = useRef(new Map<string, AbortController>());
   const syncs = useRef(new Map<string, { key: string; controller: AbortController }>());
 
-  const readList = useCallback(async (signal: AbortSignal) => {
+  const readList = useCallback(async (signal: AbortSignal, quiet = false) => {
     if (!projectId || !url) return;
-    setLists(current => ({ ...current, [key]: { status: 'loading' } }));
+    if (!quiet) setLists(current => ({ ...current, [key]: { status: 'loading' } }));
     try {
       const incoming = await loadExternalActivities({ projectId, service: 'Figma', signal });
       if (signal.aborted) return;
@@ -25,6 +25,7 @@ export function useFigmaActivities(userId: number, project: Project | undefined,
       setLists(current => ({ ...current, [key]: { status: 'ready' } }));
     } catch (error) {
       if (signal.aborted) return;
+      if (quiet) return;
       setLists(current => ({ ...current, [key]: {
         status: 'error', error: error instanceof Error ? error.message : 'Figma 변경사항을 불러오지 못했어요.',
       } }));
@@ -42,6 +43,22 @@ export function useFigmaActivities(userId: number, project: Project | undefined,
       if (!controller.signal.aborted) return readList(controller.signal);
     }).finally(release);
     return () => { controller.abort(); release(); };
+  }, [key, projectId, readList, url]);
+
+  useEffect(() => {
+    if (!projectId || !url) return;
+    const controller = new AbortController();
+    let timer: number | undefined;
+    async function poll() {
+      if (!document.hidden && !reads.current.has(key) && !syncs.current.has(projectId!)) {
+        reads.current.set(key, controller);
+        try { await readList(controller.signal, true); }
+        finally { if (reads.current.get(key) === controller) reads.current.delete(key); }
+      }
+      if (!controller.signal.aborted) timer = window.setTimeout(() => void poll(), 5000);
+    }
+    timer = window.setTimeout(() => void poll(), 5000);
+    return () => { controller.abort(); window.clearTimeout(timer); };
   }, [key, projectId, readList, url]);
 
   useEffect(() => {
