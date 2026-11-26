@@ -34,17 +34,11 @@
 
 ### Frontend
 
-![React](https://img.shields.io/badge/React-087EA4?style=for-the-badge&logo=react&logoColor=white)
-![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
-![React Router](https://img.shields.io/badge/React_Router-B42538?style=for-the-badge&logo=reactrouter&logoColor=white)
-![Vite](https://img.shields.io/badge/Vite-6543BE?style=for-the-badge&logo=vite&logoColor=white)
-![CSS Modules](https://img.shields.io/badge/CSS_Modules-374151?style=for-the-badge&logo=cssmodules&logoColor=white)
+**`⚛️ React`** **`🔷 TypeScript`** **`🔀 React Router`** **`⚡ Vite`** **`🎨 CSS Modules`**
 
 ### DevOps & Tools
 
-![Vercel](https://img.shields.io/badge/Vercel-181818?style=for-the-badge&logo=vercel&logoColor=white)
-![GitHub](https://img.shields.io/badge/GitHub-24292F?style=for-the-badge&logo=github&logoColor=white)
-![Playwright](https://img.shields.io/badge/Playwright-276749?style=for-the-badge)
+**`▲ Vercel`** **`🐙 GitHub`** **`🎭 Playwright`**
 
 ## 프로젝트 구조
 
