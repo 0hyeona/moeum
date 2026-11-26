@@ -38,7 +38,7 @@ function FigmaLiveConnectionView({ projectId, fileUrl, onEnabled }: Props) {
   const state = figmaLiveState(connection, pairing, now);
   const cardStatus = !connection ? (statusError ? '연결 확인 필요' : '')
     : statusError ? '연결 확인 필요'
-    : state === 'connected' || state === 'baseline' ? '연결 중'
+    : state === 'connected' || state === 'baseline' ? '연결됨'
     : state === 'expired' ? '연결 만료'
     : state === 'code-expired' ? '연결 코드 만료'
     : state === 'waiting' ? '연결 대기' : '미연결';
@@ -48,8 +48,16 @@ function FigmaLiveConnectionView({ projectId, fileUrl, onEnabled }: Props) {
     : state === 'waiting' ? '플러그인에서 연결을 완료해주세요.'
     : connection ? '플러그인을 켜두면 변경사항이 모여요.' : '';
   const active = state === 'connected' || state === 'baseline';
+  const collectionLabel = !active ? '' : connection?.collection_state === 'sending' ? '전송 중'
+    : connection?.collection_state === 'error' ? '전송 오류 · 재시도 중'
+    : connection?.collection_state === 'collecting' ? '자동 수집 중'
+    : '수집 대기 · 플러그인을 실행해 주세요';
   const showPairing = !active || reconnecting;
   const codeUsable = state === 'waiting' && Boolean(pairing);
+
+  useEffect(() => {
+    if (connection?.connected) { setReconnecting(false); setPairing(undefined); }
+  }, [connection?.connected]);
 
   useEffect(() => () => { operation.current++; }, []);
 
@@ -58,7 +66,7 @@ function FigmaLiveConnectionView({ projectId, fileUrl, onEnabled }: Props) {
     if (!expiresAt) return;
     const delay = Date.parse(expiresAt) - Date.now();
     if (!Number.isFinite(delay) || delay <= 0) return;
-    const timer = window.setTimeout(() => setNow(Date.now()), delay + 1);
+    const timer = window.setTimeout(() => setNow(Date.now()), Math.min(delay + 1, 2147483647));
     return () => window.clearTimeout(timer);
   }, [connection?.expires_at]);
 
@@ -98,7 +106,7 @@ function FigmaLiveConnectionView({ projectId, fileUrl, onEnabled }: Props) {
       } catch (cause) {
         if (!controller.signal.aborted && version === operation.current) setStatusError(cause instanceof Error ? cause.message : '실시간 연결을 확인하지 못했어요.');
       } finally {
-        if (open && !controller.signal.aborted) timer = window.setTimeout(() => void refresh(), 5000);
+        if (!controller.signal.aborted) timer = window.setTimeout(() => void refresh(), document.hidden ? 30000 : 5000);
       }
     }
     void refresh();
@@ -139,6 +147,8 @@ function FigmaLiveConnectionView({ projectId, fileUrl, onEnabled }: Props) {
 
   return <div id={connectionId} className={styles.connection}>
     {cardStatus && <p className={styles.cardStatus} data-state={statusError ? 'error' : state} role="status">{cardStatus}</p>}
+    {collectionLabel && <p className={styles.hint} role="status">{collectionLabel}</p>}
+    {active && connection?.last_received_at && <p className={styles.hint}>마지막 수집: {new Date(connection.last_received_at).toLocaleString('ko-KR')}</p>}
     <button ref={trigger} type="button" className={`${ui.secondaryButton} ${styles.trigger}`} onClick={() => { setNow(Date.now()); setOpen(true); }} aria-haspopup="dialog" aria-expanded={open}>실시간 연결 관리</button>
     {cardHint && <p className={styles.hint}>{cardHint}</p>}
     {open && <dialog ref={dialog} className={styles.panel} aria-labelledby={`${connectionId}-title`} aria-describedby={`${connectionId}-intro`}
@@ -181,7 +191,8 @@ function FigmaLiveConnectionView({ projectId, fileUrl, onEnabled }: Props) {
           <p className={styles.finishHint}>입력한 뒤 플러그인에서 <strong>‘연결하고 기준 저장’</strong>을 누르세요.</p>
           <p className={styles.hint}>코드는 10분간 한 번만 사용해요. 새 코드는 기존 연결을 교체해요.</p>
         </section> : <section className={styles.connectedInfo} aria-label="연결 정보">
-          <p>Figma 플러그인 창을 열어둔 채 편집해주세요.</p>
+          <p>{collectionLabel}</p>
+          <p className={styles.hint}>다음 실행부터 저장된 연결로 자동 수집해요. 모음 웹사이트를 닫아도 플러그인이 실행 중이면 기록돼요.</p>
           <p className={styles.hint}>{connection?.last_received_at ? '마지막 전송: ' + new Date(connection.last_received_at).toLocaleString('ko-KR') : '첫 전송을 기다리고 있어요.'}</p>
           <button type="button" className={styles.textButton} onClick={() => setReconnecting(true)}>다른 코드로 다시 연결</button>
         </section>}
@@ -203,7 +214,7 @@ function FigmaLiveConnectionView({ projectId, fileUrl, onEnabled }: Props) {
               <li>파일 불일치: Figma에서 연 파일과 위 공유 링크가 같은지 확인해주세요.</li>
               <li>전송 오류: 플러그인의 오류 안내를 확인하고 ‘지금 보내기 / 다시 시도’를 누르세요.</li>
             </ul>
-            <p className={styles.hint}>첫 전송은 비교 기준을 저장해요. 이후 편집은 약 1초씩 묶어 기록하며, 플러그인 창을 열어둬야 해요. 연결은 최대 8시간 유지돼요.</p>
+            <p className={styles.hint}>첫 전송은 비교 기준을 저장해요. 이후 약 5초마다 변경된 요소를 자동 전송해요. 재실행 시 누락된 최종 상태를 비교하며 종료 중의 중간 편집 이력은 복원하지 않아요. 연결 토큰은 발급 후 8시간 동안 유효해요. 만료되거나 연결을 해제하면 새 코드로 다시 연결해 주세요.</p>
             {connection?.enabled && <button type="button" className={styles.disconnectButton} disabled={busy} onClick={() => void disconnect()}>실시간 연결 해제</button>}
           </details>
         </div>
