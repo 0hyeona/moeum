@@ -93,10 +93,11 @@
 .noticeTitle span { font-size: 12px; color: var(--color-muted); }
 .noticeContent p { margin: 8px 0 0; color: var(--color-muted); font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
 .serviceError .noticeTitle span { color: #9b5324; }
-.serviceNotice .textButton { display: inline-flex; align-items: center; justify-content: center; min-height: 42px; padding: 10px 16px; border: 1px solid var(--color-border-strong); border-radius: var(--radius-control); background: var(--color-surface); color: var(--color-text-strong); font-size: 15px; line-height: 20px; font-weight: 600; white-space: nowrap; text-decoration: none; }
+.serviceNotice .textButton { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; width: max-content; min-width: 84px; max-width: 100%; flex-shrink: 0; min-height: 42px; padding: 10px 16px; border: 1px solid var(--color-border-strong); border-radius: var(--radius-control); background: var(--color-surface); color: var(--color-text-strong); font-size: 15px; line-height: 20px; font-weight: 600; white-space: normal; overflow-wrap: anywhere; text-align: center; text-decoration: none; }
 .serviceNotice .textButton:hover { border-color: var(--color-subtle); background: var(--color-background); }
 .serviceNotice .textButton:disabled { cursor: default; opacity: .6; background: none; }
-.noticeActions { display: flex; flex-wrap: wrap; gap: 8px; }
+.noticeActions { display: flex; flex-wrap: wrap; justify-content: flex-end; justify-self: end; min-width: 0; max-width: 100%; gap: 8px; }
+@media (max-width: 900px) { .serviceNotice { grid-template-columns: 40px minmax(0, 1fr); } .noticeActions { grid-column: 2; justify-self: start; justify-content: flex-start; } }
 @media (max-width: 520px) { .serviceNotice { grid-template-columns: 32px minmax(0, 1fr); gap: 8px; } .noticeIcon { width: 32px; height: 32px; } .serviceNotice > .textButton, .noticeActions { grid-column: 2; justify-self: start; } }
 
 .selectedFilters { display: flex; flex: 1 0 100%; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; padding-top: 4px; }
@@ -127,15 +128,15 @@
   .status, .notionDetails { margin-top: 8px; }
   .hide { top: 12px; right: 8px; width: 36px; height: 44px; }
   .hide img { width: 18px; height: 18px; }
-  .serviceNotice { grid-template-columns: 28px minmax(0, 1fr) auto; padding: 10px; gap: 8px; margin-top: 8px; font-size: 14px; }
+  .serviceNotice { grid-template-columns: 28px minmax(0, 1fr); padding: 10px; gap: 8px; margin-top: 8px; font-size: 14px; }
   .noticeIcon { width: 28px; height: 28px; border-radius: 6px; }
   .noticeIcon img { max-width: 18px; max-height: 18px; width: auto; height: auto; }
   .noticeTitle { gap: 4px 6px; }
   .noticeContent p, .noticeTitle span { font-size: 12px; line-height: 18px; }
   .noticeContent p { margin-top: 4px; }
-  .serviceNotice > .textButton, .noticeActions { grid-column: 3; grid-row: 1; }
+  .serviceNotice > .textButton, .noticeActions { grid-column: 2; grid-row: auto; }
   .serviceNotice .textButton { min-height: 44px; padding: 8px; font-size: 12px; line-height: 18px; white-space: normal; }
-  .noticeActions { max-width: 84px; gap: 4px; }
+  .noticeActions { max-width: 100%; gap: 4px; }
   .side { gap: 12px; }
   .side > p { margin: 0; font-size: 12px; line-height: 18px; }
   .panel { padding: 12px; }
