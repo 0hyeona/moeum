@@ -6,6 +6,8 @@ export type FigmaPluginStatus = {
   connected: boolean;
   expires_at: string | null;
   last_received_at: string | null;
+  last_seen_at?: string | null;
+  collection_state?: 'collecting' | 'sending' | 'error' | 'paused' | 'offline';
 };
 export type FigmaPairing = { code: string; expires_at: string; project_name: string; file_url: string };
 
