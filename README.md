@@ -1,11 +1,14 @@
 # 모음 (moeum) 프론트엔드
 
-GitHub 커밋, Figma 디자인 수정, Notion 문서 변경을 프로젝트별로 모아 작업의 배경과 결과를 **Story**로 기록하는 React 웹 앱입니다.
+> GitHub 커밋, Figma 디자인 수정, Notion 문서 변경을 한데 모아 프로젝트의 작업 과정을 **Story**로 기록하는 웹 앱입니다.
+
+**팀원**　고지운 · 김현아 · 송연지
 
 ## 목차
 
 - [프로젝트 링크 및 서버 정보](#프로젝트-링크-및-서버-정보)
 - [프로젝트 소개](#프로젝트-소개)
+- [기술 스택](#기술-스택-tech-stack)
 - [프로젝트 구조](#프로젝트-구조)
 - [설치 및 실행 방법](#설치-및-실행-방법)
 - [환경 정보](#환경-정보)
@@ -14,22 +17,34 @@ GitHub 커밋, Figma 디자인 수정, Notion 문서 변경을 프로젝트별�
 
 | 구분 | 용도 | 링크 |
 | --- | --- | --- |
-| 웹 서비스 · Vercel | 모음 로그인 및 프로젝트 이용 | [모음 열기](https://moeum-log.vercel.app/) |
-| 백엔드 API · Render | 인증, 프로젝트, 변경사항, Story 요청 처리 | [fastapi-practice-jwse.onrender.com](https://fastapi-practice-jwse.onrender.com) |
-| API 문서 · Swagger UI | 엔드포인트별 요청·응답 형식 확인 | [운영 Swagger](https://fastapi-practice-jwse.onrender.com/docs) |
+| 배포 사이트 · Vercel | 로그인하고 프로젝트와 Story 이용하기 | [모음 열기](https://moeum-log.vercel.app/) |
 | 프론트엔드 저장소 | React 웹 앱과 Figma 플러그인 | [0hyeona/moeum](https://github.com/0hyeona/moeum) |
-| 백엔드 저장소 | FastAPI 서버와 DB 스키마 | [0hyeona/fastapi-practice](https://github.com/0hyeona/fastapi-practice) |
-
-Vercel에 배포된 웹 앱은 Render의 FastAPI 서버를 호출합니다. 서버는 프로젝트, 변경사항, Story를 TiDB에 저장합니다.
+| 연동 API · Render | 화면에서 호출하는 API 주소와 요청·응답 형식 확인 | [API 주소](https://fastapi-practice-jwse.onrender.com) · [Swagger UI](https://fastapi-practice-jwse.onrender.com/docs) |
 
 ## 프로젝트 소개
 
 작업을 마친 뒤에는 커밋만 보고 디자인을 바꾼 이유까지 떠올리기 어렵습니다. 모음에서는 같은 작업에서 나온 기록을 하나의 Story로 묶습니다. 예를 들어 Figma의 로그인 버튼 수정과 GitHub의 구현 커밋을 함께 선택하고, 어떤 문제를 해결했는지 적어 둘 수 있습니다.
 
 1. **프로젝트**를 만들고 GitHub 저장소, Figma 파일, Notion 페이지 중 사용하는 도구의 주소를 등록합니다.
-2. **대시보드**에서 아직 Story로 정리하지 않은 기록을 확인합니다. Figma 편집 기록은 대시보드에서 발급한 연결 코드와 파일 공유 링크를 ‘모음 실시간 연결’ 플러그인에 입력해 수집합니다.
-3. **Story 작성**에 사용할 변경사항을 1~20개 선택하면 서버가 저장된 기록과 확인 가능한 GitHub 코드 차이(diff)를 규칙 기반으로 요약합니다. 초안에 변경 이유와 배운 점을 덧붙이거나 직접 작성할 수 있습니다.
+2. **대시보드**에서 아직 Story로 정리하지 않은 기록을 확인합니다. Figma 편집 기록을 가져오려면 대시보드에서 발급한 연결 코드와 파일 공유 링크를 ‘모음 실시간 연결’ 플러그인에 입력합니다. [Figma 플러그인 연결 안내](./docs/connection-deployment-check.md)
+3. **Story 작성** 화면에서 함께 기록할 변경사항을 1~20개 선택합니다. 생성된 초안을 다듬거나 직접 작성해 변경 이유와 배운 점을 남깁니다.
 4. **타임라인**에서 저장한 Story를 시간순으로 살펴보고 검색어나 태그로 다시 찾습니다.
+
+## 기술 스택 (Tech Stack)
+
+### Frontend
+
+![React](https://img.shields.io/badge/React-087EA4?style=for-the-badge&logo=react&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
+![React Router](https://img.shields.io/badge/React_Router-B42538?style=for-the-badge&logo=reactrouter&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-6543BE?style=for-the-badge&logo=vite&logoColor=white)
+![CSS Modules](https://img.shields.io/badge/CSS_Modules-374151?style=for-the-badge&logo=cssmodules&logoColor=white)
+
+### DevOps & Tools
+
+![Vercel](https://img.shields.io/badge/Vercel-181818?style=for-the-badge&logo=vercel&logoColor=white)
+![GitHub](https://img.shields.io/badge/GitHub-24292F?style=for-the-badge&logo=github&logoColor=white)
+![Playwright](https://img.shields.io/badge/Playwright-276749?style=for-the-badge)
 
 ## 프로젝트 구조
 
@@ -61,7 +76,7 @@ moeum/
 
 ## 설치 및 실행 방법
 
-### 배포된 API로 프론트엔드 실행
+### 로컬에서 프론트엔드 실행
 
 Git, Node.js, npm이 필요합니다. 아래 명령은 Windows PowerShell 기준이며 macOS와 Linux에서는 같은 npm 명령을 사용할 수 있습니다.
 
@@ -82,25 +97,7 @@ npm run dev
 
 Bash(Git Bash, macOS, Linux)에서는 위 블록의 환경 파일 복사 줄에 `test -f .env || cp .env.example .env`를 사용합니다.
 
-터미널에 표시된 `Local` 주소를 엽니다. 기본값은 [http://127.0.0.1:5173](http://127.0.0.1:5173)입니다. 예시 환경 파일은 배포된 Render API를 사용하므로, 이 구성에서 저장하는 프로젝트와 Story는 운영 DB에 반영됩니다.
-
-### 로컬 FastAPI로 전환
-
-1. 별도 터미널에서 `fastapi-practice` 폴더를 엽니다. Python 가상환경, `requirements.txt` 패키지와 개발용 DB가 준비되어 있으면 서버를 실행합니다.
-
-   ```powershell
-   .\.venv\Scripts\python.exe -m uvicorn app.main:app --reload
-   ```
-
-2. 프론트엔드의 `.env.local`에 로컬 서버 주소를 설정합니다.
-
-   ```dotenv
-   VITE_API_BASE_URL=http://127.0.0.1:8000
-   ```
-
-3. 프론트 개발 서버를 `npm run dev`로 다시 시작합니다. API 목록은 [로컬 Swagger](http://127.0.0.1:8000/docs)에서 확인할 수 있습니다.
-
-기본 Figma 플러그인은 Render에 데이터를 보냅니다. 플러그인 연결을 시험할 때는 프론트도 Render API에 연결해 같은 서버에서 코드를 발급받으세요. [플러그인 매니페스트](./figma-plugin-local/manifest.json) · [Figma 실시간 연결 안내](./docs/connection-deployment-check.md)
+터미널에 표시된 `Local` 주소를 엽니다. 기본값은 [http://127.0.0.1:5173](http://127.0.0.1:5173)입니다. 기본 설정에서는 로컬 화면에서 저장한 프로젝트와 Story도 배포 사이트에서 같은 계정으로 확인할 수 있습니다.
 
 ### 테스트와 빌드
 
@@ -119,22 +116,18 @@ Bash(Git Bash, macOS, Linux)에서는 위 블록의 환경 파일 복사 줄에 
 | UI와 상태 관리 | React 19.3.0, TypeScript 5.9.3, React Router 7.18.4, React Context 및 Hooks |
 | 스타일과 빌드 | CSS Modules, Pretendard, Vite 8.3.1 |
 | 테스트 | Node.js 기본 테스트 러너, Playwright 1.65.1 |
-| 서버와 DB | Python 3.12 이상, FastAPI, Uvicorn, SQLAlchemy, PyMySQL, TiDB(MySQL 호환) |
-| 메일 | 피드백 전송은 EmailJS Browser SDK 5.0.3, 비밀번호 재설정 인증번호 발송은 백엔드 Gmail API |
+| 피드백 폼 | EmailJS Browser SDK 5.0.3 |
 
 프론트엔드 패키지 버전은 잠금 파일 기준이며, 이 버전의 Vite가 지원하는 Node.js 범위는 `^20.19.0 || >=22.12.0`입니다. [package-lock.json](./package-lock.json)
 
 ### 프론트엔드 환경변수
 
-`.env`의 기본 구성입니다. `VITE_API_BASE_URL`에는 서버의 기본 주소를 입력합니다. EmailJS 세 값은 피드백 메일을 보낼 때 함께 설정합니다. [.env.example](./.env.example) · [EmailJS 설정 안내](./docs/feedback-emailjs.md)
+기본 `.env`에는 배포된 Render API 주소 한 줄을 넣습니다. [.env.example](./.env.example)
 
 ```dotenv
 VITE_API_BASE_URL=https://fastapi-practice-jwse.onrender.com
-
-# 피드백 메일을 보낼 때 설정하는 공개 식별자
-VITE_EMAILJS_SERVICE_ID=
-VITE_EMAILJS_TEMPLATE_ID=
-VITE_EMAILJS_PUBLIC_KEY=
 ```
 
-개발 중에는 Vite가 `/backend` 요청을 설정한 API 주소로 전달합니다. 배포 빌드는 API 서버를 직접 호출하므로 Render의 `FRONTEND_ORIGINS`에 `https://moeum-log.vercel.app`을 포함합니다. `VITE_`로 시작하는 값은 브라우저에 공개됩니다. DB 비밀번호, OAuth 비밀 키, Gmail 갱신 토큰은 백엔드에서 관리합니다.
+피드백 메일 전송을 사용하려면 `.env.local`에 EmailJS 설정을 추가합니다. [피드백 메일 설정 안내](./docs/feedback-emailjs.md)
+
+로컬에서는 Vite가 `/backend` 요청을 `VITE_API_BASE_URL`로 전달합니다. Vercel에서는 브라우저가 해당 주소로 직접 요청하므로 배포 프로젝트에도 같은 값을 설정합니다.
