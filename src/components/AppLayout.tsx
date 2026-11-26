@@ -5,6 +5,7 @@ import chevronDown from '../../assets/icons/chevron-down.svg';
 import { useProjects } from '../state/ProjectsContext';
 import { PageGuide } from './PageGuide';
 import { ProfileMenu } from './ProfileMenu';
+import { FeedbackModal } from './FeedbackModal';
 import styles from './AppLayout.module.css';
 
 const navigation = [
@@ -16,6 +17,7 @@ const navigation = [
 // header="centered": 프로젝트를 고르기 전 화면(s2, s3). header="project": 프로젝트 안의 화면(s4~).
 export function AppLayout({ header }: { header: 'centered' | 'project' }) {
   const { pathname } = useLocation();
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -27,7 +29,7 @@ export function AppLayout({ header }: { header: 'centered' | 'project' }) {
         {header === 'centered' ? (
           <div className={`${styles.header} ${styles.centered}`}>
             <HomeLink />
-            <ProfileMenu />
+            <ProfileMenu onFeedback={() => setFeedbackOpen(true)} />
           </div>
         ) : (
           <div className={styles.header}>
@@ -38,7 +40,7 @@ export function AppLayout({ header }: { header: 'centered' | 'project' }) {
                 <NavLink key={item.to} to={item.to} className={({ isActive }) => isActive ? styles.active : undefined}>{item.label}</NavLink>
               ))}
             </nav>
-            <ProfileMenu />
+            <ProfileMenu onFeedback={() => setFeedbackOpen(true)} />
           </div>
         )}
       </header>
@@ -46,6 +48,7 @@ export function AppLayout({ header }: { header: 'centered' | 'project' }) {
         <Outlet />
       </main>
       <PageGuide key={pathname} pathname={pathname} />
+      {feedbackOpen && <FeedbackModal onClose={() => setFeedbackOpen(false)} />}
     </div>
   );
 }

@@ -36,7 +36,7 @@ export function ConfirmDialog({ title, description, confirmLabel, cancelLabel = 
       aria-describedby={`${id}-description`}
       onClose={onCancel}
       aria-busy={pending}
-      onCancel={(event) => { event.preventDefault(); if (!pending) onCancel(); }}
+      onCancel={(event) => { event.preventDefault(); if (!pending) dialog.current?.close(); }}
       onClick={(event) => { if (!pending && event.target === event.currentTarget) dialog.current?.close(); }}
     >
       <div className={styles.content}>

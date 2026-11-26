@@ -30,11 +30,13 @@
 .empty { padding: 48px 16px; border: 1px solid var(--color-border); border-radius: 8px; background: white; text-align: center; color: var(--color-muted); }
 .empty p { margin: 0 0 8px; font-size: 16px; }
 .srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-.selectedFilters { display: flex; flex: 1 0 100%; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
-.conditionChip { display: inline-flex; align-items: center; gap: 8px; min-width: 0; max-width: 100%; min-height: 44px; padding: 6px 10px; border: 1px solid #dce4ff; border-radius: 8px; background: var(--color-selected); color: var(--color-link); font-size: 12px; line-height: 18px; }
+.selectedFilters { display: flex; flex: 1 0 100%; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; padding-top: 4px; }
+.conditionChip { display: inline-flex; align-items: center; gap: 10px; min-width: 0; max-width: 100%; min-height: 36px; padding: 7px 14px; border: 1px solid color-mix(in srgb, var(--color-primary) 35%, white); border-radius: 999px; background: color-mix(in srgb, var(--color-primary) 12%, white); color: var(--color-link); font-size: 12px; font-weight: 500; line-height: 18px; }
+.conditionChip:hover { background: color-mix(in srgb, var(--color-primary) 16%, white); }
 .conditionChip span:first-child { min-width: 0; overflow-wrap: anywhere; text-align: left; }
 .conditionChip span:last-child { flex: none; }
-.resetFilters { min-height: 44px; padding: 6px 8px; border: 0; background: transparent; color: var(--color-muted); font-size: 12px; }
+.resetFilters { min-height: 36px; padding: 6px 10px; border: 0; border-radius: 8px; background: transparent; color: var(--color-muted); font-size: 12px; }
+.resetFilters:hover { color: var(--color-text-strong); background: var(--color-surface); }
 .resultsCount { margin: 0; color: var(--color-muted); font-size: 12px; line-height: 18px; }
 .resultsCount strong { color: var(--color-text-strong); font-weight: 600; }
 @media (max-width: 1000px) { .page { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'aside' 'toolbar' 'timeline'; grid-template-rows: auto auto auto; gap: 24px; } .aside { position: static; max-height: none; overflow-y: visible; display: grid; grid-template-columns: minmax(0,1fr); } }
@@ -90,4 +92,8 @@
 .tags button { min-height: 30px; padding: 5px 9px; border-color: var(--color-border-strong); border-radius: var(--radius-control); background: var(--color-background); color: var(--color-muted); font-size: 13px; line-height: 18px; }
 @media (max-width: 700px) {
   .tags button { min-height: 30px; padding: 4px 8px; font-size: 14px; line-height: 20px; }
+}
+
+@media (max-width: 700px) {
+  .conditionChip, .resetFilters { min-height: 40px; }
 }

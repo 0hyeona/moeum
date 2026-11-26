@@ -9,8 +9,10 @@ const data = moduleUrl(await readFile(new URL('../src/data/projects.ts', import.
 const activity = moduleUrl(await readFile(new URL('../src/data/activity.ts', import.meta.url), 'utf8'));
 const client = moduleUrl((await readFile(new URL('../src/api/client.ts', import.meta.url), 'utf8')).replaceAll('import.meta.env.DEV', 'true'));
 const auth = moduleUrl('export const getAccessToken = () => "test-access-token";');
+const figma = moduleUrl(await readFile(new URL('../src/data/figmaChanges.ts', import.meta.url), 'utf8'));
 const source = (await readFile(new URL('../src/api/stories.ts', import.meta.url), 'utf8'))
-  .replace("'./client'", JSON.stringify(client)).replace("'./auth'", JSON.stringify(auth)).replace("'../data/projects'", JSON.stringify(data));
+  .replace("'./client'", JSON.stringify(client)).replace("'./auth'", JSON.stringify(auth)).replace("'../data/projects'", JSON.stringify(data))
+  .replace("'../data/figmaChanges'", JSON.stringify(figma));
 const api = await import(moduleUrl(source));
 const external = moduleUrl((await readFile(new URL('../src/api/externalActivities.ts', import.meta.url), 'utf8'))
   .replace("'./client'", JSON.stringify(client)).replace("'./auth'", JSON.stringify(auth)).replace("'../data/activity'", JSON.stringify(activity)));

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { getFigmaConnection, startFigmaConnection, type FigmaConnection as Connection } from '../api/figma';
+import { FigmaCallbackMismatchError, getFigmaConnection, startFigmaConnection, type FigmaConnection as Connection } from '../api/figma';
 import form from './form.module.css';
 import ui from './ui.module.css';
 
@@ -8,13 +8,15 @@ type Props = {
   returnTo?: string;
   buttonClassName?: string;
   onStatus?: (connected: boolean) => void;
+  pluginConnectionId?: string;
 };
 
-export function FigmaConnection({ compact = false, returnTo = '/settings#figma-account', buttonClassName, onStatus }: Props) {
+export function FigmaConnection({ compact = false, returnTo = '/settings#figma-account', buttonClassName, onStatus, pluginConnectionId }: Props) {
   const [connection, setConnection] = useState<Connection | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [pending, setPending] = useState(false);
+  const [needsPlugin, setNeedsPlugin] = useState(false);
   const busy = useRef(false);
 
   useEffect(() => {
@@ -36,31 +38,44 @@ export function FigmaConnection({ compact = false, returnTo = '/settings#figma-a
     busy.current = true;
     setPending(true);
     setError('');
+    setNeedsPlugin(false);
     try {
       await startFigmaConnection(returnTo);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Figma 승인 화면을 열지 못했어요.');
+      setNeedsPlugin(cause instanceof FigmaCallbackMismatchError);
       busy.current = false;
       setPending(false);
     }
   }
 
-  if (loading) return <span role="status">Figma 계정 확인 중…</span>;
+  if (loading) return null;
   const connected = connection?.connected && Boolean(connection.figma_user_id);
   if (compact && connected && !error) return null;
+  if (compact && pluginConnectionId) return <p>아래 ‘Figma 실시간 연결 관리’에서 플러그인을 연결해 주세요.</p>;
 
   const button = <button type="button" className={buttonClassName ?? ui.secondaryButton}
     disabled={pending} onClick={() => void connect()}>
     {pending ? '승인 화면으로 이동 중…' : connected ? 'Figma 계정 다시 연결' : 'Figma 계정 연결'}
   </button>;
+  const feedback = <>
+    {error && <p className={form.error} role="alert">{error}</p>}
+    {needsPlugin && <p>{pluginConnectionId
+      ? <a href={`#${pluginConnectionId}`}>플러그인으로 실시간 연결하기</a>
+      : <a href="/settings#settings-url-Figma">프로젝트 설정에 Figma 파일 링크를 저장한 뒤 플러그인으로 연결해 주세요.</a>}</p>}
+  </>;
   if (compact) return <>
     {button}
-    {error && <p className={form.error} role="alert">{error}</p>}
+    {feedback}
   </>;
 
   return <div id="figma-account" style={{ marginBlock: 16 }}>
     <p role="status">{connected ? 'Figma 계정이 연결됐어요.' : 'Figma 계정을 연결하면 등록한 파일의 변경사항을 가져올 수 있어요.'}</p>
-    {button}
-    {error && <p className={form.error} role="alert">{error}</p>}
+    <p>실시간 플러그인은 ‘Figma 실시간 연결 관리’에서 연결하세요. Google 계정 연결은 필요하지 않아요.</p>
+    <details><summary>Figma 계정 연결 (버전 기록 조회용 · 선택 사항)</summary>
+      <p>OAuth 앱을 찾을 수 없다는 오류가 나오면 앱 관리자에게 문의해 주세요. 실시간 플러그인은 이 승인 없이 사용할 수 있어요.</p>
+      {button}
+    </details>
+    {feedback}
   </div>;
 }

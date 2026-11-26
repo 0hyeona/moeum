@@ -1,12 +1,11 @@
 import { StoryLoadNotice } from '../components/StoryLoadNotice';
-import { FigmaConnection } from '../components/FigmaConnection';
 import { FigmaLiveConnection } from '../components/FigmaLiveConnection';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { startNotionConnection } from '../api/notion';
 import { needsNotionConnection } from '../data/notionConnectionState';
 import { Link, Navigate } from 'react-router';
 import type { ActivityState } from '../data/activity';
-import { services, type ServiceState } from '../data/projects';
+import { services, type Service } from '../data/projects';
 import { useProjects } from '../state/ProjectsContext';
 import { StoryCard } from '../components/StoryCard';
 import { GitHubActivity } from '../components/GitHubActivity';
@@ -14,18 +13,9 @@ import { ServiceIcon, useDocumentTitle } from '../components/ui';
 import ui from '../components/ui.module.css';
 import styles from './DashboardPage.module.css';
 
-const retryTime = new Intl.DateTimeFormat('ko-KR', {
-  month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit',
-});
-
 export function DashboardPage() {
   useDocumentTitle('대시보드');
-  const { activeProject: project, storyListState, githubCommits, activityStates, refreshActivities, figma } = useProjects();
-  const { reload: reloadFigma } = figma;
-  const [figmaConnected, setFigmaConnected] = useState<boolean | null>(null);
-  const [figmaLiveEnabled, setFigmaLiveEnabled] = useState(false);
-  useEffect(() => setFigmaLiveEnabled(false), [project?.id, project?.urls?.Figma]);
-  useEffect(() => reloadFigma(), [reloadFigma]);
+  const { activeProject: project, storyListState, githubCommits, activityStates, refreshActivities } = useProjects();
   if (!project) return <Navigate to="/projects" replace />;
 
   return (
@@ -43,53 +33,26 @@ export function DashboardPage() {
           <ul className={styles.stats}>
             {services.map(service => {
               const state = activityStates[service];
-              const needsConnection = (service === 'Notion' && needsNotionConnection(state))
-                || (service === 'Figma' && figmaConnected === false && !figmaLiveEnabled);
               const count = project.changes.filter(change => change.service === service).length;
-              const showFigmaControls = service === 'Figma' && Boolean(project.urls?.Figma) && (figmaConnected === true || figmaLiveEnabled);
-              const retryAt = showFigmaControls ? figma.retryAt : undefined;
               return (
-                <li key={service} className={styles.stat} data-waiting={retryAt !== undefined || undefined}>
+                <li key={service} className={styles.stat} data-service={service}>
                   <span className={styles.statService}>
                     <span className={styles.statIcon}><ServiceIcon service={service} size={18} /></span>
                     {service}
                   </span>
-                  {!needsConnection && <PendingCount sync={state.status} state={project.services[service]} count={count} />}
-                  <div className={styles.statActions}>
-                    {service === 'Notion' && needsConnection && <NotionConnectAction />}
-                    {service === 'Figma' && !figmaLiveEnabled && <FigmaConnection compact returnTo="/dashboard"
-                      onStatus={setFigmaConnected} buttonClassName={styles.statButton} />}
-                    {showFigmaControls && (
-                      <button type="button" className={styles.statButton} disabled={figma.refreshDisabled}
-                        onClick={figma.refresh} aria-label={figma.syncing || retryAt !== undefined ? undefined : 'Figma 새로고침'}>
-                        {figma.syncing ? '수집 중…' : retryAt !== undefined ? '수집 대기 중' : '새로고침'}
-                      </button>
-                    )}
-                    {service === 'Notion' && !needsConnection && project.urls?.Notion && (
-                      <button type="button" className={styles.statButton} disabled={state.status === 'loading'}
-                        onClick={() => refreshActivities(service)} aria-label={state.status === 'ready' ? 'Notion 새로고침' : undefined}>
-                        {state.status === 'loading' ? '수집 중…' : state.status === 'error' ? '다시 시도' : '새로고침'}
-                      </button>
-                    )}
-                    {state.status === 'error' && service === 'GitHub' && (
-                      <button type="button" className={styles.statButton} onClick={() => refreshActivities(service)}>다시 시도</button>
-                    )}
-                  </div>
-                  <div className={styles.statNotes}>
-                    {service === 'Figma' && project.urls?.Figma && <FigmaLiveConnection
-                      key={`${project.id}:${project.urls.Figma}`} projectId={project.id} fileUrl={project.urls.Figma} onEnabled={setFigmaLiveEnabled} />}
-                    {state.status === 'error' && !needsConnection && <p className={styles.statError} role="alert">{state.error}</p>}
-                    {state.status === 'error' && service === 'Figma' && (
-                      <button type="button" className={styles.statButton} disabled={figma.syncing} onClick={figma.reload}>목록 다시 조회</button>
-                    )}
-                    {retryAt !== undefined ? (
-                      <p className={styles.retryNote} role="status" title={figma.notice}>
-                        <time dateTime={new Date(retryAt).toISOString()}>{retryTime.format(retryAt)}</time> 이후 다시 시도
-                      </p>
-                    ) : showFigmaControls && figma.notice && (
-                      <p className={figma.error ? styles.statError : undefined} role={figma.error ? 'alert' : 'status'}>{figma.notice}</p>
-                    )}
-                    {showFigmaControls && figma.hasMore && <p>이어 수집할 기록이 있어요.</p>}
+                  <span className={styles.count} aria-label={`${service} 미정리 변경사항 ${count}개`}><strong>{count}</strong>개</span>
+                  <div className={styles.serviceControls}>
+                    {service === 'Figma' ? (project.urls?.Figma ? <FigmaLiveConnection
+                      key={`${project.id}:${project.urls.Figma}`} projectId={project.id} fileUrl={project.urls.Figma} />
+                      : <div className={styles.connectionSummary}>
+                        <p className={styles.connectionStatus} role="status">미연결</p>
+                        <Link className={styles.statButton} to="/settings#settings-url-Figma">실시간 연결 관리</Link>
+                        <p className={styles.connectionHint}>변경사항을 받으려면 Figma 파일을 등록해주세요.</p>
+                      </div>) : <ServiceConnectionControls service={service} state={state}
+                        connected={project.services[service].status === 'connected'}
+                        reconnect={project.services[service].status === 'reconnect'}
+                        hasUrl={Boolean(project.urls?.[service])}
+                        onRefresh={() => refreshActivities(service)} />}
                   </div>
                 </li>
               );
@@ -148,19 +111,47 @@ function NotionConnectAction() {
 
   return <>
     <button type="button" className={styles.statButton} disabled={pending} onClick={() => void connect()}>
-      {pending ? 'Notion 승인 화면 여는 중…' : 'Notion 페이지 연결'}
+      {pending ? '연결 화면 여는 중…' : '연결 관리'}
     </button>
     {error && <p className={styles.statError} role="alert">{error}</p>}
   </>;
 }
 
-function PendingCount({ state, count, sync }: { state: ServiceState; count: number; sync: ActivityState['status'] }) {
-  if (sync === 'pending') return <span className={styles.statStatus}>조회 준비 중</span>;
-  if (sync === 'loading') return <span className={styles.statStatus} role="status">조회 중…</span>;
-  if (sync === 'error') return <span className={`${styles.statStatus} ${styles.statError}`}>조회 실패</span>;
-  if (state.status === 'connected') {
-    return <span className={styles.count}><strong>{count}</strong>개</span>;
-  }
-  if (state.status === 'reconnect') return <span className={`${styles.statStatus} ${styles.statError}`}>재연결 필요</span>;
-  return <span className={styles.statStatus}>미연결</span>;
+function ServiceConnectionControls({ service, state, connected, reconnect, hasUrl, onRefresh }: {
+  service: Exclude<Service, 'Figma'>;
+  state: ActivityState;
+  connected: boolean;
+  reconnect: boolean;
+  hasUrl: boolean;
+  onRefresh: () => void;
+}) {
+  const needsApproval = service === 'Notion' && hasUrl && needsNotionConnection(state);
+  const needsReconnect = hasUrl && (needsApproval || reconnect);
+  const failed = state.status === 'error';
+  const loading = state.status === 'loading' || state.status === 'pending';
+  const canRefreshNotion = service === 'Notion' && hasUrl && !needsReconnect && (connected || state.status === 'ready');
+  const status = !hasUrl ? '미연결' : needsReconnect ? '재연결 필요'
+    : loading ? '' : failed ? '조회 실패' : connected ? '연결 중' : '미연결';
+  const hint = !hasUrl ? `변경사항을 받으려면 ${service === 'GitHub' ? '저장소' : 'Notion 페이지'}를 등록해주세요.`
+    : needsReconnect ? '변경사항을 받으려면 다시 연결해주세요.'
+    : failed ? '변경사항을 가져오지 못했어요. 다시 시도하거나 연결을 확인해주세요.'
+    : service === 'GitHub' ? '저장소 연결과 접근 권한을 관리해요.'
+    : canRefreshNotion ? '새로고침하면 최신 변경사항을 가져와요.' : '변경사항을 받으려면 Notion 페이지를 연결해주세요.';
+
+  return <div className={styles.connectionSummary}>
+    {status && <p className={styles.connectionStatus} data-state={needsReconnect || failed ? 'error' : status === '연결 중' ? 'connected' : undefined} role="status">{status}</p>}
+    <div className={styles.connectionActions}>
+      {canRefreshNotion ? <button type="button" className={styles.statButton} disabled={loading}
+        onClick={onRefresh} aria-label="Notion 새로고침">{loading ? '수집 중…' : '새로고침'}</button>
+        : needsApproval ? <NotionConnectAction /> : <Link className={styles.statButton}
+          aria-label={`${service} 연결 관리`} to={`/settings#${service.toLowerCase()}-account`}>연결 관리</Link>}
+      {service === 'GitHub' && hasUrl && !needsReconnect && failed && <button type="button"
+        className={styles.refreshButton} disabled={loading} onClick={onRefresh}
+        aria-label={`${service} ${failed ? '다시 시도' : '새로고침'}`}>
+        {loading ? '수집 중…' : failed ? '다시 시도' : '새로고침'}
+      </button>}
+    </div>
+    <p className={styles.connectionHint}>{hint}</p>
+    {failed && !needsReconnect && <p className={styles.statError} role="alert">{state.error}</p>}
+  </div>;
 }

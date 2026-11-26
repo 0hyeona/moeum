@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
-import { readGithubActivities, syncGithubActivities, type StoredCommit } from '../api/activities';
+import { readGithubActivities, refreshGithubActivities, type StoredCommit } from '../api/activities';
 import { replaceServiceChanges, type ActivityState } from '../data/activity';
 import type { Project } from '../data/projects';
 
@@ -15,20 +15,15 @@ export function useGithubActivities(project: Project | undefined, setProjects: D
     running.current = controller;
     setResult(last => ({ key, commits: last?.key === key ? last.commits : [], state: { status: 'loading' } }));
     try {
-      if (sync) await syncGithubActivities(id, controller.signal);
-
-      let activities = await readGithubActivities(id, url, controller.signal);
-
-      if (!sync && !controller.signal.aborted && activities.commits.length === 0) {
-        await syncGithubActivities(id, controller.signal);
-        activities = await readGithubActivities(id, url, controller.signal);
-      }
+      const activities: Awaited<ReturnType<typeof readGithubActivities>> & { error?: string } = sync
+        ? await refreshGithubActivities(id, url, controller.signal)
+        : await readGithubActivities(id, url, controller.signal);
 
       const { commits, changes } = activities;
       if (controller.signal.aborted) return;
       setProjects(items => items.map(item => item.id === id && item.urls?.GitHub === url
         ? replaceServiceChanges(item, 'GitHub', changes) : item));
-      setResult({ key, commits, state: { status: 'ready' } });
+      setResult({ key, commits, state: activities.error ? { status: 'error', error: activities.error } : { status: 'ready' } });
     } catch (error) {
       if (!controller.signal.aborted) setResult(last => ({ key, commits: last?.key === key ? last.commits : [],
         state: { status: 'error', error: error instanceof Error ? error.message : 'GitHub 기록을 불러오지 못했어요.' } }));

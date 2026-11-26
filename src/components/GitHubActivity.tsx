@@ -47,14 +47,16 @@ function ConnectedActivity({ url, state, commits, onRefresh }: Props) {
       {['', ...branches].map(branch => <button key={branch} type="button" className={styles.branch}
         aria-pressed={selectedBranch === branch} onClick={() => setBranch(branch)}>{branch || '전체'}</button>)}
     </div>}
-    {error ? <div className={styles.githubEmpty}>
+    {error && <div className={styles.githubEmpty}>
       <p role="alert">{error}</p>
+      {commits.length > 0 && <p>저장된 기록은 계속 볼 수 있어요. 최신 변경사항은 다음 새로고침에서 확인하세요.</p>}
       <div className={styles.githubActions}>
         <button type="button" className={ui.primaryButton} onClick={onRefresh}>다시 시도</button>
         <Link to="/settings#settings-url-GitHub">연결 설정 확인</Link>
       </div>
-    </div> : loading && !recent.length ? <p className={styles.empty} role="status">GitHub 기록을 불러오는 중이에요…</p>
-      : !recent.length ? <p className={styles.empty} role="status">{selectedBranch ? `${selectedBranch} 브랜치에 아직 커밋이 없어요.` : '저장된 GitHub 변경사항이 없어요. 새로고침을 눌러 커밋을 가져오세요.'}</p>
+    </div>}
+    {loading && !recent.length ? null
+      : !recent.length ? !error && <p className={styles.empty} role="status">{selectedBranch ? `${selectedBranch} 브랜치에 아직 커밋이 없어요.` : '저장된 GitHub 변경사항이 없어요. 새로고침을 눌러 커밋을 가져오세요.'}</p>
         : <>
           <div className={styles.tableScroll}>
             <table className={styles.table}>

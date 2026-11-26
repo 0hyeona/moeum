@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link } from 'react-router';
-import { signup } from '../api/auth';
+import { isEmailRegistered, signup } from '../api/auth';
 import { AuthButton, AuthField, AuthShell, PendingContent } from '../components/AuthUI';
 import { useDocumentTitle } from '../components/ui';
 import styles from './LoginPage.module.css';
@@ -28,9 +28,14 @@ export function SignupPage() {
   const heading = useRef<HTMLHeadingElement>(null);
   const current = steps[step];
   const last = step === steps.length - 1;
+  const checkingEmail = current.key === 'email';
 
-  useEffect(() => { input.current?.focus({ preventScroll: true }); }, [step]);
-  useEffect(() => { if (done) heading.current?.focus(); }, [done]);
+  useEffect(() => {
+    if (!busy) {
+      if (done) heading.current?.focus();
+      else input.current?.focus({ preventScroll: true });
+    }
+  }, [step, busy, done]);
 
   function move(next: number) {
     if (pending.current) return;
@@ -54,16 +59,29 @@ export function SignupPage() {
     } else if (!value || value !== values.password) message = '비밀번호가 일치하지 않아요. 다시 확인해주세요.';
     setError(message);
     if (message) { input.current?.focus(); return; }
-    if (!last) { move(step + 1); return; }
+    if (!last && !checkingEmail) { move(step + 1); return; }
     pending.current = true;
     setBusy(true);
     setSubmitError('');
     try {
+      if (checkingEmail) {
+        if (await isEmailRegistered(values.email.trim())) {
+          setError('이미 사용 중인 이메일이에요. 다른 이메일을 입력하거나 로그인해주세요.');
+        } else {
+          setBackward(false);
+          setStep(step + 1);
+        }
+        return;
+      }
       await signup({ name: values.name.trim(), user_id: crypto.randomUUID(), email: values.email.trim(), password: values.password });
       setValues(previous => ({ ...previous, password: '', confirm: '' }));
       setDone(true);
     } catch (cause) {
-      setSubmitError(cause instanceof Error ? cause.message : '회원가입에 실패했어요. 다시 시도해주세요.');
+      if (checkingEmail) {
+        setError(cause instanceof Error ? cause.message : '이메일을 확인하지 못했어요. 다시 시도해주세요.');
+      } else {
+        setSubmitError(cause instanceof Error ? cause.message : '회원가입에 실패했어요. 다시 시도해주세요.');
+      }
     } finally { pending.current = false; setBusy(false); }
   }
 
@@ -82,7 +100,7 @@ export function SignupPage() {
             <span className={styles.srOnly}>{item.label}{index < step ? ' 완료' : ''}</span>
           </li>)}
         </ol>
-        <PendingContent pending={busy} fields={1} label="가입을 완료하고 있어요. 잠시만 기다려주세요.">
+        <PendingContent pending={busy} fields={1} label={checkingEmail ? '이메일을 확인하고 있어요. 잠시만 기다려주세요.' : '가입을 완료하고 있어요. 잠시만 기다려주세요.'}>
           <form onSubmit={submit} noValidate onKeyDown={event => {
             if (event.key === 'Enter' && (event.nativeEvent.isComposing || event.keyCode === 229)) event.preventDefault();
           }}>
@@ -101,7 +119,7 @@ export function SignupPage() {
                   }} />
               </div>
               {submitError && <div className={styles.signupError} role="alert"><p>{submitError}</p><button type="button" onClick={() => move(1)}>이메일 다시 확인하기</button></div>}
-              <AuthButton type="submit">{busy ? '가입 중…' : last ? '가입 완료하기' : '다음'}{!busy && <span className={styles.buttonArrow} aria-hidden="true">→</span>}</AuthButton>
+              <AuthButton type="submit">{busy ? (checkingEmail ? '확인 중…' : '가입 중…') : last ? '가입 완료하기' : '다음'}{!busy && <span className={styles.buttonArrow} aria-hidden="true">→</span>}</AuthButton>
               <p className={styles.enterHint}>Enter 키로 {last ? '가입을 완료할' : '다음으로 넘어갈'} 수 있어요.</p>
             </fieldset>
           </form>

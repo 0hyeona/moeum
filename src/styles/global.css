@@ -34,7 +34,7 @@
 
 * { box-sizing: border-box; }
 html { scrollbar-gutter: stable; }
-body { margin: 0; min-width: 320px; cursor: url('/cursors/moeum-cream.png') 3 2, auto; }
+body { margin: 0; min-width: 320px; }
 button, input, select { font: inherit; }
 button { cursor: pointer; }
 @media (hover: hover) and (pointer: fine) {
@@ -44,7 +44,7 @@ button { cursor: pointer; }
   html body label:has(input[type='checkbox']:not(:disabled)),
   html body input[type='checkbox']:not(:disabled),
   html body input[type='radio']:not(:disabled) {
-    cursor: url('/cursors/moeum-cream.png') 3 2, pointer;
+    cursor: pointer;
   }
 }
 button, input, select, a { -webkit-tap-highlight-color: transparent; }

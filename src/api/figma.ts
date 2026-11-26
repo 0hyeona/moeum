@@ -11,6 +11,13 @@ const PENDING_KEY = 'moeum.figma.pending';
 const CALLBACK_PATH = '/auth/figma/callback';
 const PATHS = new Set(['/settings', '/dashboard', '/changes', '/projects']);
 
+export class FigmaCallbackMismatchError extends Error {
+  constructor() {
+    super('Figma 연결 주소가 현재 사이트와 맞지 않아요.');
+    this.name = 'FigmaCallbackMismatchError';
+  }
+}
+
 function authorization(): HeadersInit {
   const token = getAccessToken();
   if (!token) throw new Error('로그인 후 Figma 연결을 다시 시작해 주세요.');
@@ -55,7 +62,7 @@ export async function startFigmaConnection(returnTo?: string): Promise<void> {
   const callback = new URL(url.searchParams.get('redirect_uri') || '');
   if (!state || callback.origin !== window.location.origin || callback.pathname !== CALLBACK_PATH
       || callback.search || callback.hash) {
-    throw new Error('Figma 연결 주소가 현재 사이트와 다릅니다. 관리자에게 문의해 주세요.');
+    throw new FigmaCallbackMismatchError();
   }
   sessionStorage.setItem(PENDING_KEY, JSON.stringify({ state, returnTo: figmaReturnPath(returnTo) }));
   window.location.assign(url.href);
@@ -67,7 +74,7 @@ export function completeFigmaConnection(query: string): Promise<{ returnTo: stri
   const params = new URLSearchParams(query);
   if (params.has('error')) {
     sessionStorage.removeItem(PENDING_KEY);
-    return Promise.reject(new Error('Figma 연결 승인이 취소됐어요. 설정에서 다시 연결할 수 있어요.'));
+    return Promise.reject(new Error('Figma 연결 승인이 취소됐어요. 대시보드에서 다시 연결할 수 있어요.'));
   }
   const code = params.get('code');
   const state = params.get('state');

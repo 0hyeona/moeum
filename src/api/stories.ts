@@ -1,6 +1,7 @@
 import { apiRequest } from './client';
 import { getAccessToken } from './auth';
 import { emptyStoryFields, type AnalysisMode, type Change, type Service, type Story, type StoryFields } from '../data/projects';
+import { completeFigmaAnalysis } from '../data/figmaChanges';
 
 export type ServerStoryStatus = 'draft' | 'published';
 type StoryResponse = {
@@ -100,7 +101,7 @@ export async function analyzeActivities(projectId: string, changes: Change[], si
   const value = objectValue(result);
   if (!Array.isArray(value.tags) || value.tags.some(tag => typeof tag !== 'string')
     || ['title', 'summary', 'before', 'after'].some(key => value[key] !== null && typeof value[key] !== 'string')) throw new Error('AI 분석 응답 형식을 확인해주세요.');
-  return { title: text(value.title), summary: text(value.summary), before: text(value.before), after: text(value.after), tags: value.tags as string[] };
+  return completeFigmaAnalysis({ title: text(value.title), summary: text(value.summary), before: text(value.before), after: text(value.after), tags: value.tags as string[] }, changes);
 }
 async function linkedActivities(projectId: string, signal?: AbortSignal, storyId?: string) {
   const result: LinkedActivity[] = [];

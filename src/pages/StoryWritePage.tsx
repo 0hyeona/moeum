@@ -23,9 +23,8 @@ const textFields: readonly { key: TextFieldKey; label: string; placeholder: stri
 
 export function StoryWritePage() {
   const { storyId } = useParams();
-  const { activeProject: project, clearAnalysis } = useProjects();
+  const { activeProject: project } = useProjects();
   const { story, switching, error, retry } = useStory(storyId);
-  useEffect(() => { if (storyId) clearAnalysis(); }, [storyId, clearAnalysis]);
   useDocumentTitle(story?.status === '완료' ? 'Story 수정' : 'Story 작성');
   if (!project) return <Navigate to="/projects" replace />;
   if (!storyId) return <NewStory key={project.id} />;

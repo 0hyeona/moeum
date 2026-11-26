@@ -28,7 +28,7 @@ export function PageGuide({ pathname }: { pathname: string }) {
 
   if (!guide) return null;
 
-  return <div ref={container} className={styles.guide}
+  return <div ref={container} className={`${styles.guide} ${pathname === '/changes' ? styles.withActions : ''}`}
     onMouseEnter={() => setOpen(true)}
     onMouseLeave={() => {
       if (document.activeElement !== button.current) setOpen(false);

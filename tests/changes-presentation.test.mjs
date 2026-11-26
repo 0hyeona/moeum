@@ -2,7 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import ts from 'typescript';
-const code = ts.transpileModule(await readFile(new URL('../src/pages/changesPresentation.ts', import.meta.url), 'utf8'), {
+const figma = ts.transpileModule(await readFile(new URL('../src/data/figmaChanges.ts', import.meta.url), 'utf8'), {
+  compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
+}).outputText;
+const code = ts.transpileModule((await readFile(new URL('../src/pages/changesPresentation.ts', import.meta.url), 'utf8'))
+  .replace("'../data/figmaChanges'", JSON.stringify('data:text/javascript;base64,' + Buffer.from(figma).toString('base64'))), {
   compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
 }).outputText;
 const { newestChanges, changeDescription, notionDetails } = await import('data:text/javascript;base64,' + Buffer.from(code).toString('base64'));

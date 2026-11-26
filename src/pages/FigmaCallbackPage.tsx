@@ -26,7 +26,7 @@ export function FigmaCallbackPage() {
     <h1>Figma 연결</h1>
     {error ? <>
       <p className={styles.error} role="alert">{error}</p>
-      <Link className={styles.primaryLink} to="/settings#figma-account">설정으로 돌아가기</Link>
+      <Link className={styles.primaryLink} to="/dashboard">대시보드로 돌아가기</Link>
     </> : <p role="status">승인한 Figma 계정을 연결하고 있어요…</p>}
   </section></AuthShell>;
 }

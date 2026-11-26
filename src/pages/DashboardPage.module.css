@@ -19,7 +19,20 @@
 .count { align-items: baseline; gap: 4px; white-space: nowrap; }
 .count strong { color: var(--color-text-strong); font-size: 32px; font-variant-numeric: tabular-nums; line-height: 38px; letter-spacing: -.04em; }
 .statActions { display: flex; flex-wrap: wrap; align-items: start; gap: 6px; min-height: 34px; }
+.serviceControls { min-width: 0; }
+.connectionSummary { display: grid; justify-items: start; gap: 8px; min-width: 0; }
+.connectionSummary > p { margin: 0; }
+.connectionStatus, .connectionHint { color: var(--color-muted); font-size: 12px; line-height: 18px; overflow-wrap: anywhere; word-break: keep-all; }
+.connectionStatus[data-state='connected'] { color: #246347; }
+.connectionStatus[data-state='error'] { color: #923a2c; }
+.connectionActions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.connectionActions .statButton { white-space: normal; text-align: center; }
+.connectionSummary .statError { font-size: 12px; line-height: 18px; overflow-wrap: anywhere; }
+.refreshButton { composes: ghostButton from '../components/ui.module.css'; font-size: 12px; padding: 4px 0; }
+.statActions > p { flex-basis: 100%; min-width: 0; margin: 0; overflow-wrap: anywhere; word-break: keep-all; }
+.statActions > p a { color: var(--color-link); font-size: inherit; }
 .statButton { composes: secondaryButton from '../components/ui.module.css'; }
+.statActions .statButton { white-space: normal; text-align: center; }
 .statButton:hover:not(:disabled) { border-color: var(--color-subtle); background: var(--color-background); color: var(--color-text-strong); }
 .statButton:disabled { background: transparent; color: var(--color-muted); cursor: default; }
 .stat[data-waiting='true'] .statButton:disabled { border-color: #eddfc7; background: #fff2da; color: #80521b; }
@@ -35,15 +48,16 @@
 .stories { margin: 32px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 16px; }
 .storyCard { min-height: 94px; --story-card-summary-gap: 4px; --story-card-badge-padding: 4px; }
 
-.commits { min-height: 308px; }
-.branches { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 42px; }
-.commits .panelHeader:has(+ .branches) { padding-bottom: 8px; }
-.commits .branches { margin-top: 0; padding-bottom: 24px; }
-.branch { min-height: 28px; max-width: 100%; padding: 4px 8px; border: 1px solid var(--color-subtle); border-radius: var(--radius-control); background: rgb(238 239 242 / 60%); color: var(--color-muted); font-size: 13px; line-height: 18px; overflow-wrap: anywhere; }
-.branch:hover { border-color: var(--color-muted); }
-.branch[aria-pressed='true'] { background: #3d3d3f; border-color: #3d3d3f; color: var(--color-border); }
+.commits { min-height: 308px; padding: 36px; }
+.commits .panelHeader { gap: 16px 24px; flex-wrap: wrap; }
+.branches { display: flex; flex-wrap: wrap; gap: 10px; }
+.commits .branches { margin: 24px 0 0; padding: 0; }
+.branch { min-height: 42px; max-width: 100%; padding: 10px 16px; border: 0; border-radius: 8px; background: transparent; color: var(--color-muted); font-size: 14px; line-height: 20px; overflow-wrap: anywhere; transition: background-color 150ms, color 150ms; }
+.branch:hover { background: var(--color-background); color: var(--color-text-strong); }
+.branch:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 3px; }
+.branch[aria-pressed='true'] { background: #3d3d3f; color: #fff; font-weight: 600; }
 .tableScroll { margin-top: 42px; overflow-x: auto; }
-.commits .branches + .tableScroll { margin-top: 0; }
+.commits .branches + .tableScroll { margin-top: 28px; }
 .table { width: 100%; min-width: 720px; border-collapse: collapse; table-layout: fixed; text-align: left; font-size: 16px; line-height: 22px; }
 .narrowColumn { width: 16.5%; }
 .messageColumn { width: 40.1%; }
@@ -75,13 +89,18 @@
   .count, .statStatus { grid-column: 2; grid-row: 1; justify-content: flex-end; min-height: 32px; }
   .count strong { font-size: 26px; line-height: 32px; }
   .statActions { grid-column: 3; grid-row: 1; justify-content: flex-end; }
+  .serviceControls { grid-column: 1 / -1; grid-row: 2; padding-top: 8px; border-top: 1px solid var(--color-border); }
+  .statActions:has([role='alert']) { grid-column: 1 / -1; grid-row: 2; justify-content: flex-start; }
   .statActions .statButton { width: 100%; padding-inline: 8px; }
   .statNotes { grid-column: 1 / -1; padding: 7px 0 0; border-top: 1px solid var(--color-border); }
   .retryNote time { display: inline; }
   .pendingFooter .storyButton { width: 100%; }
   .stories { margin-top: 20px; }
   .branches, .tableScroll { margin-top: 24px; }
-  .commits .branches { gap: 6px; padding-bottom: 12px; }
+  .commits { padding: 24px 20px; }
+  .commits .branches { gap: 8px; margin-top: 20px; padding: 0; }
+  .branch { min-height: 44px; padding: 10px 14px; }
+  .commits .branches + .tableScroll { margin-top: 20px; }
   .githubActions { gap: 8px; }
   .tableScroll { overflow: visible; margin-top: 16px; }
   .table { display: block; min-width: 0; font-size: 12px; line-height: 18px; }
@@ -132,8 +151,9 @@
   .storyButton img { width: 16px; height: 16px; }
   .stories { margin-top: 12px; gap: 8px; }
   .storyCard { min-height: 0; }
-  .commits .branches { gap: 6px; padding-bottom: 12px; }
-  .branch { padding: 3px 6px; }
+  .commits { padding: 20px 16px; }
+  .commits .branches { gap: 8px; margin-top: 20px; padding: 0; }
+  .branch { min-height: 44px; padding: 10px 12px; }
   .githubActions { gap: 8px; justify-content: flex-start; }
   .table { font-size: var(--font-mobile-body); line-height: 18px; }
 }

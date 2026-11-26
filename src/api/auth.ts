@@ -1,5 +1,5 @@
 
-import { apiRequest } from './client';
+import { ApiError, apiRequest } from './client';
 
 export type LoginRequest = {
   email: string;
@@ -53,6 +53,17 @@ export const signup = (data: SignupRequest) =>
 // 이메일 확인
 export const checkEmail = (email: string) =>
   post<MessageResponse>('/password/check-email', { email });
+
+// 기존 이메일 확인 API는 등록된 이메일에 성공, 미등록 이메일에 404를 반환합니다.
+export async function isEmailRegistered(email: string): Promise<boolean> {
+  try {
+    await checkEmail(email);
+    return true;
+  } catch (cause) {
+    if (cause instanceof ApiError && cause.status === 404) return false;
+    throw cause;
+  }
+}
 
 // 비밀번호 재설정 코드 요청
 export const requestPasswordCode = (email: string) =>

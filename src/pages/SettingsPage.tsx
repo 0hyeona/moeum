@@ -6,9 +6,6 @@ import { getConnections, type Connection } from '../api/projects';
 import { githubRepository } from '../data/github';
 import { useProjects } from '../state/ProjectsContext';
 import { ConfirmDialog } from '../components/ConfirmDialog';
-import { NotionConnection } from '../components/NotionConnection';
-import { FigmaConnection } from '../components/FigmaConnection';
-import { FigmaLiveConnection } from '../components/FigmaLiveConnection';
 import { PageHeading, ServiceIcon, useDocumentTitle } from '../components/ui';
 import form from '../components/form.module.css';
 import ui from '../components/ui.module.css';
@@ -155,7 +152,7 @@ function ProjectInfo({ project }: { project: Project }) {
     <section className={styles.panel} aria-labelledby="info-heading">
       <SectionHeader id="info-heading" title="프로젝트 정보" description="수정 후 Enter를 누르거나 입력칸을 벗어나면 자동으로 저장돼요." />
       {saveError && <p className={form.error} role="alert">{saveError}</p>}
-      <fieldset className={`${styles.fields} ${styles.fieldset}`} disabled={pending} aria-busy={pending}>
+      <fieldset className={`${styles.fields} ${styles.fieldset}`} aria-busy={pending}>
         <div className={form.field}>
           <div className={form.labelRow}>
             <label htmlFor="settings-name" className={form.label}>프로젝트명 (필수)</label>
@@ -168,6 +165,7 @@ function ProjectInfo({ project }: { project: Project }) {
             maxLength={50}
             autoComplete="off"
             value={draft.name}
+            readOnly={pending}
             onChange={(event) => change('name', event.target.value)}
             onBlur={() => commit('name')}
             onKeyDown={(event) => commitOnEnter(event, 'name')}
@@ -189,6 +187,7 @@ function ProjectInfo({ project }: { project: Project }) {
             maxLength={120}
             autoComplete="off"
             value={draft.description}
+            readOnly={pending}
             onChange={(event) => change('description', event.target.value)}
             onBlur={() => commit('description')}
             onKeyDown={(event) => commitOnEnter(event, 'description')}
@@ -263,18 +262,15 @@ function Connections({ project }: { project: Project }) {
 
   return <section className={styles.panel} aria-labelledby="tools-heading">
     <SectionHeader id="tools-heading" title="연동 서비스" description="프로젝트에서 사용할 작업 도구의 URL을 관리합니다." />
-    <NotionConnection />
-    <FigmaConnection />
-    {project.urls?.Figma && <FigmaLiveConnection key={project.urls.Figma} projectId={project.id} fileUrl={project.urls.Figma} />}
     <StatusText message={message} />
     {error && <p className={form.error} role="alert">{error}</p>}
     {loadFailed && <button onClick={() => setAttempt(value => value + 1)}>다시 시도</button>}
-    {!connections && !loadFailed && <p role="status">연결 정보를 불러오는 중이에요…</p>}
+
     <fieldset className={styles.fieldset} disabled={!connections || pending !== null} aria-busy={pending !== null}>
       <ul className={styles.services}>
         {settingServices.map(service => {
           const connection = connections?.find(item => item.source === service.toLowerCase());
-          return <li key={service} className={styles.service}>
+          return <li key={service} id={`${service.toLowerCase()}-account`} className={styles.service}>
           <div className={styles.serviceInfo}>
             <div className={styles.serviceHeading}><label htmlFor={'settings-url-' + service} className={styles.serviceName}><ServiceIcon service={service} />{service}</label><span className={styles.connectionBadge}>{connection ? connectionLabels[connection.connection_status] : '—'}</span></div>
             <input id={'settings-url-' + service} type="url" inputMode="url" autoComplete="off" spellCheck={false}

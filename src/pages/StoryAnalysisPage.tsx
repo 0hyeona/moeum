@@ -15,14 +15,23 @@ export function StoryAnalysisPage() {
   const {
     activeProject: project,
     analysis,
+    analysisSaved,
     analyze,
     clearAnalysis,
     selectedChangeIds,
     toggleChange,
-    updateAnalysis, createStoryDraft, analyzing, analysisError, cancelAnalysis,
+    updateAnalysis, createStoryDraft, analyzing, analysisError, cancelAnalysis, activityStates, figma,
   } = useProjects();
   const navigate = useNavigate();
   useEffect(() => () => cancelAnalysis(), [cancelAnalysis]);
+  const { reload: reloadFigma } = figma;
+  useEffect(() => reloadFigma(), [reloadFigma]);
+  useEffect(() => {
+    if (!analysis || analysisSaved) return;
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [analysis, analysisSaved]);
   const [creating, setCreating] = useState(false);
   const [selectionOpen, setSelectionOpen] = useState(false);
   const selectionToggle = useRef<HTMLButtonElement>(null);
@@ -34,17 +43,24 @@ export function StoryAnalysisPage() {
     setCreating(true);
     setCreateError('');
     try { navigate(`/stories/${await createStoryDraft()}/edit`, { replace: true }); }
-    catch (error) { setCreateError(error instanceof Error ? error.message : '초안을 저장하지 못했어요.'); }
-    finally { creatingRef.current = false; setCreating(false); }
+    catch (error) {
+      setCreateError(error instanceof Error ? error.message : '초안을 저장하지 못했어요.');
+      creatingRef.current = false;
+      setCreating(false);
+    }
   }
   const changesHeading = useRef<HTMLHeadingElement>(null);
   if (!project) return <Navigate to="/projects" replace />;
-  if (!analysis) return <Navigate to="/changes" replace />;
+  if (!analysis) return creating
+    ? <div className={styles.page}><PageHeading title="Story 만들기" /><p role="status">저장한 초안을 열고 있어요…</p></div>
+    : <Navigate to="/changes" replace />;
 
   const { changeIds } = analysis;
   const changes = changeIds
     .map((id) => project.changes.find((change) => change.id === id))
     .filter((change): change is Change => !!change);
+  const missingChanges = changes.length !== changeIds.length;
+  const loadingChanges = Object.values(activityStates).some(state => state.status === 'loading' || state.status === 'pending');
 
   // 남은 변경사항으로 분석을 다시 만들고, 마지막 하나까지 빼면 변경사항 선택 화면으로 돌아갑니다.
   // 뒤로 가기로 비워진 분석 화면에 돌아오지 않도록 기록을 교체합니다.
@@ -71,7 +87,7 @@ export function StoryAnalysisPage() {
           aria-labelledby="selected-changes-heading"
         >
           <button type="button" ref={selectionToggle} className={styles.selectionToggle} aria-expanded={selectionOpen} aria-controls="analysis-selection-details" onClick={() => setSelectionOpen(open => !open)}>
-            <span>선택한 변경사항 <strong>{changes.length}개</strong></span>
+            <span>선택한 변경사항 <strong>{changeIds.length}개</strong></span>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
           </button>
           <div id="analysis-selection-details" className={styles.selectionDetails} data-open={selectionOpen}>
@@ -79,7 +95,7 @@ export function StoryAnalysisPage() {
             <h2 id="selected-changes-heading" ref={changesHeading} tabIndex={-1}>
               선택된 변경사항
             </h2>
-            <p className={styles.count}><strong>{changes.length}</strong>개</p>
+            <p className={styles.count}><strong>{changeIds.length}</strong>개</p>
             <Link to="/changes" onClick={clearAnalysis} className={styles.resetButton}>변경사항 재설정</Link>
           </div>
           <ul className={styles.changes}>
@@ -94,7 +110,8 @@ export function StoryAnalysisPage() {
             <ModeOptions value={analysis.mode} />
           </div>
           </div>
-          {analyzing && <p role="status">남은 변경사항을 다시 분석하고 있어요…</p>}
+          {missingChanges && !loadingChanges && <p role="alert">선택한 변경사항을 확인할 수 없어요. 수정한 분석은 유지돼요. 변경사항 목록에서 연결 상태와 수집 결과를 확인해주세요.</p>}
+
           {analysisError && <p role="alert">{analysisError}</p>}
         </section>
 
@@ -102,6 +119,9 @@ export function StoryAnalysisPage() {
           <section className={styles.panel} aria-labelledby="analysis-result-heading">
             <h2 id="analysis-result-heading">Story 분석 결과</h2>
             <p className={styles.description}>작업 기록과 확인 가능한 코드 변경을 정리한 초안이에요. 내용을 확인하고 수정해주세요.</p>
+            <p className={styles.description} role={analysisSaved ? 'status' : 'alert'}>{analysisSaved
+              ? '수정한 분석은 이 탭에 임시 저장돼요.'
+              : '임시 저장을 사용할 수 없어요. 화면을 닫기 전에 ‘Story 작성 시작’을 눌러 저장해주세요.'}</p>
             <div className={styles.fields}>
               <div className={form.field}>
                 <label htmlFor="analysis-title" className={form.label}>Story 제목</label>
@@ -169,7 +189,7 @@ export function StoryAnalysisPage() {
           <button
             type="button"
             className={`${ui.primaryButton} ${styles.startButton}`}
-            disabled={creating || analyzing}
+            disabled={creating || analyzing || missingChanges}
             onClick={startWriting}
           >
             {creating ? '초안 저장 중…' : 'Story 작성 시작'}

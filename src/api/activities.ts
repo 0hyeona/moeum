@@ -62,3 +62,15 @@ export async function syncGithubActivities(id: string, signal: AbortSignal) {
     }
   }
 }
+
+export async function refreshGithubActivities(id: string, url: string, signal: AbortSignal) {
+  let error: string | undefined;
+  try {
+    await syncGithubActivities(id, signal);
+  } catch (cause) {
+    if (signal.aborted) throw cause;
+    error = cause instanceof Error ? cause.message : 'GitHub 최신 기록을 가져오지 못했어요.';
+  }
+  // Stored records remain readable even when GitHub rejects the latest import.
+  return { ...await readGithubActivities(id, url, signal), error };
+}

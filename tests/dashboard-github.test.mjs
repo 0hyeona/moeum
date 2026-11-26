@@ -11,7 +11,34 @@ const source = (await read('../src/api/activities.ts'))
   .replace("'./projects'", JSON.stringify(moduleUrl('export const projectRequest = (...args) => globalThis.dashboardRequest(...args)')))
   .replace("'../data/github'", JSON.stringify(moduleUrl(await read('../src/data/github.ts'))))
   .replace("'../data/githubChanges'", JSON.stringify(moduleUrl(await read('../src/data/githubChanges.ts'))));
-const { readGithubActivities, syncGithubActivities } = await import(moduleUrl(source));
+const { readGithubActivities, syncGithubActivities, refreshGithubActivities } = await import(moduleUrl(source));
+
+test('rate-limited refresh still returns saved records with a visible warning', async t => {
+  t.after(() => { delete globalThis.dashboardRequest; });
+  const calls = [];
+  globalThis.dashboardRequest = async path => {
+    calls.push(path);
+    if (path.includes('/github/branches')) throw new Error('GitHub 요청 한도를 초과했습니다.');
+    return [{ activity_id: 42, project_id: 7, source: 'github', story_id: null,
+      external_id: 'team/repo:abc1234', branch_name: 'main', title: 'Saved commit', description: null,
+      occurred_at: '2026-11-25T10:00:00Z', source_url: 'https://github.com/team/repo/commit/abc1234' }];
+  };
+  const result = await refreshGithubActivities('7', 'https://github.com/team/repo', new AbortController().signal);
+  assert.match(result.error, /요청 한도/);
+  assert.equal(result.commits[0].sha, 'abc1234');
+  assert.equal(result.changes[0].activityId, 42);
+  assert.equal(calls.length, 2);
+  assert.ok(calls[1].includes('/activities?'));
+});
+
+test('canceled refresh never starts another stored-record request', async t => {
+  t.after(() => { delete globalThis.dashboardRequest; });
+  const controller = new AbortController();
+  let calls = 0;
+  globalThis.dashboardRequest = async () => { calls++; controller.abort(); throw new DOMException('Canceled', 'AbortError'); };
+  await assert.rejects(refreshGithubActivities('7', 'https://github.com/team/repo', controller.signal), { name:'AbortError' });
+  assert.equal(calls, 1);
+});
 
 test('dashboard reads only stored activities and keeps organized commits out of the pending count', async t => {
   t.after(() => { delete globalThis.dashboardRequest; });
