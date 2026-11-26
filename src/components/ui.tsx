@@ -7,7 +7,7 @@ import styles from './ui.module.css';
 
 export function useDocumentTitle(title: string) {
   useEffect(() => {
-    document.title = `${title} · 모음`;
+    document.title = `MOEUM — 협업 기록 관리 서비스`;
   }, [title]);
 }
 
