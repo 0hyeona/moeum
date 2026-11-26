@@ -1,149 +1,140 @@
-# moeum
+# 모음 (moeum) 프론트엔드
 
-## 피드백 보내기
+GitHub 커밋, Figma 디자인 수정, Notion 문서 변경을 프로젝트별로 모아 작업의 배경과 결과를 **Story**로 기록하는 React 웹 앱입니다.
 
-공통 프로필 메뉴에서 피드백을 작성해 EmailJS로 보냅니다. 설정 방법, 템플릿 변수와 스팸 방지 안내는 [EmailJS 피드백 설정](docs/feedback-emailjs.md)을 참고하세요. 환경변수가 비어 있으면 실제 전송과 성공 처리를 하지 않습니다.
+## 목차
 
-## 로컬 실행
+- [프로젝트 링크 및 서버 정보](#프로젝트-링크-및-서버-정보)
+- [프로젝트 소개](#프로젝트-소개)
+- [프로젝트 구조](#프로젝트-구조)
+- [설치 및 실행 방법](#설치-및-실행-방법)
+- [환경 정보](#환경-정보)
 
-프론트 프로젝트의 .env에 아래 주소를 설정합니다. .env.example을 복사해도 됩니다.
+## 프로젝트 링크 및 서버 정보
 
-```env
-VITE_API_BASE_URL=http://127.0.0.1:8000
+| 구분 | 용도 | 링크 |
+| --- | --- | --- |
+| 웹 서비스 · Vercel | 모음 로그인 및 프로젝트 이용 | [모음 열기](https://moeum-log.vercel.app/) |
+| 백엔드 API · Render | 인증, 프로젝트, 변경사항, Story 요청 처리 | [fastapi-practice-jwse.onrender.com](https://fastapi-practice-jwse.onrender.com) |
+| API 문서 · Swagger UI | 엔드포인트별 요청·응답 형식 확인 | [운영 Swagger](https://fastapi-practice-jwse.onrender.com/docs) |
+| 프론트엔드 저장소 | React 웹 앱과 Figma 플러그인 | [0hyeona/moeum](https://github.com/0hyeona/moeum) |
+| 백엔드 저장소 | FastAPI 서버와 DB 스키마 | [0hyeona/fastapi-practice](https://github.com/0hyeona/fastapi-practice) |
+
+Vercel에 배포된 웹 앱은 Render의 FastAPI 서버를 호출합니다. 서버는 프로젝트, 변경사항, Story를 TiDB에 저장합니다.
+
+## 프로젝트 소개
+
+작업을 마친 뒤에는 커밋만 보고 디자인을 바꾼 이유까지 떠올리기 어렵습니다. 모음에서는 같은 작업에서 나온 기록을 하나의 Story로 묶습니다. 예를 들어 Figma의 로그인 버튼 수정과 GitHub의 구현 커밋을 함께 선택하고, 어떤 문제를 해결했는지 적어 둘 수 있습니다.
+
+1. **프로젝트**를 만들고 GitHub 저장소, Figma 파일, Notion 페이지 중 사용하는 도구의 주소를 등록합니다.
+2. **대시보드**에서 아직 Story로 정리하지 않은 기록을 확인합니다. Figma 편집 기록은 대시보드에서 발급한 연결 코드와 파일 공유 링크를 ‘모음 실시간 연결’ 플러그인에 입력해 수집합니다.
+3. **Story 작성**에 사용할 변경사항을 1~20개 선택하면 서버가 저장된 기록과 확인 가능한 GitHub 코드 차이(diff)를 규칙 기반으로 요약합니다. 초안에 변경 이유와 배운 점을 덧붙이거나 직접 작성할 수 있습니다.
+4. **타임라인**에서 저장한 Story를 시간순으로 살펴보고 검색어나 태그로 다시 찾습니다.
+
+## 프로젝트 구조
+
+```text
+moeum/
+├── src/
+│   ├── main.tsx            # 앱 진입점과 페이지 라우팅
+│   ├── pages/              # 로그인, 대시보드, Story, 타임라인 화면
+│   ├── components/         # 공통 레이아웃, 카드, 입력 폼, 모달
+│   ├── api/                # 공통 HTTP 클라이언트와 기능별 API 요청
+│   ├── state/              # 로그인·프로젝트 상태와 데이터 조회 훅
+│   ├── data/               # 변경 기록 변환과 Story 초안 처리
+│   └── styles/             # 전역 스타일
+├── assets/                 # 로고, 아이콘, 글꼴
+├── public/                 # 파비콘 등 정적 파일
+├── figma-plugin-local/     # Figma 편집기에서 실행하는 플러그인
+├── tests/                  # API 및 브라우저 테스트
+├── docs/                   # 기능별 연동 문서
+├── .env.example            # 프론트엔드 환경변수 예시
+├── package.json            # npm 명령과 패키지 목록
+├── vite.config.ts          # 개발 서버와 API 프록시 설정
+└── vercel.json             # 배포 사이트의 화면 라우팅 설정
 ```
 
-백엔드 프로젝트에서 실행합니다. MySQL도 실행 중이어야 합니다.
+코드와 문서 바로가기
+
+- [페이지 라우팅](./src/main.tsx) · [공통 API 클라이언트](./src/api/client.ts)
+- [Story 작성 화면](./src/pages/StoryWritePage.tsx) · [Story API 모듈](./src/api/stories.ts) · [Story API 연동 문서](./docs/story-api-integration.md)
+
+## 설치 및 실행 방법
+
+### 배포된 API로 프론트엔드 실행
+
+Git, Node.js, npm이 필요합니다. 아래 명령은 Windows PowerShell 기준이며 macOS와 Linux에서는 같은 npm 명령을 사용할 수 있습니다.
+
+처음 내려받을 때는 저장소를 복제합니다.
+
+```sh
+git clone https://github.com/0hyeona/moeum.git
+cd moeum
+```
+
+프로젝트 폴더에서 패키지를 설치하고, `.env`가 없으면 예시 파일을 복사한 뒤 개발 서버를 실행합니다.
 
 ```powershell
-.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload
-```
-
-프론트 프로젝트에서 실행합니다. 설정을 바꿨다면 기존 개발 서버를 종료한 뒤 다시 실행합니다.
-
-```bash
+npm ci
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 npm run dev
 ```
 
-개발 중에는 브라우저가 /backend로 요청하고 Vite 프록시가 .env의 서버로 전달합니다.
-예: /backend/api/auth/login → http://127.0.0.1:8000/api/auth/login.
-/docs는 문서 주소이므로 기본 서버 주소에 붙이지 않습니다.
-빌드된 프론트는 VITE_API_BASE_URL로 직접 요청하므로 백엔드 CORS 허용이 필요합니다.
-배포 시에는 접근 가능한 온라인 백엔드와 DB 주소를 별도로 설정해야 합니다.
-프론트의 VITE_ 변수는 공개됩니다. DB 비밀번호와 Client Secret은 백엔드에서만 설정합니다.
+Bash(Git Bash, macOS, Linux)에서는 위 블록의 환경 파일 복사 줄에 `test -f .env || cp .env.example .env`를 사용합니다.
 
-## 인증 API 연결
+터미널에 표시된 `Local` 주소를 엽니다. 기본값은 [http://127.0.0.1:5173](http://127.0.0.1:5173)입니다. 예시 환경 파일은 배포된 Render API를 사용하므로, 이 구성에서 저장하는 프로젝트와 Story는 운영 DB에 반영됩니다.
 
-| 화면 / 기능 | API | 요청 데이터 |
-| --- | --- | --- |
-| 로그인 | POST /api/auth/login | email, password |
-| 회원가입 (/signup) | POST /api/auth/signup | user_id, name, email, password |
-| 이메일 확인 | POST /api/auth/password/check-email | email |
-| 인증번호 발송 / 재발송 | POST /api/auth/password/request-code | email |
-| 인증번호 확인 | POST /api/auth/password/verify-code | email, code |
-| 비밀번호 변경 | POST /api/auth/password/reset | reset_token, new_password, confirm_password |
-| 내 정보 | GET /api/auth/me | Authorization: Bearer 토큰 |
-| 로그아웃 | POST /api/auth/logout | Authorization: Bearer 토큰 |
-| GitHub 로그인 시작 | GET /api/auth/github/login | 서버에서 OAuth 시작 |
-| GitHub 인증 완료 | GET /api/auth/github/callback | code, state 또는 error |
+### 로컬 FastAPI로 전환
 
-- src/api/client.ts: 공통 fetch 요청, JSON 응답 및 오류 처리.
-- src/api/auth.ts: 인증 요청 함수, 로그인 토큰 저장과 삭제.
-- src/pages/LoginPage.tsx: 로그인 및 회원가입·비밀번호 찾기 화면 이동.
-- src/pages/AccountPage.tsx: 회원가입과 단계별 비밀번호 재설정.
-- src/pages/GithubCallbackPage.tsx: GitHub 인증 결과를 서버와 교환하고 로그인 완료.
-- src/components/AuthBoundary.tsx: 내 정보 확인, 로그인하지 않은 사용자의 접근 제한, 사용자 이름과 로그아웃 버튼.
+1. 별도 터미널에서 `fastapi-practice` 폴더를 엽니다. Python 가상환경, `requirements.txt` 패키지와 개발용 DB가 준비되어 있으면 서버를 실행합니다.
 
-회원가입이 완료되면 이메일로 로그인합니다. 중복된 계정 등 서버 오류는 화면에 표시합니다.
-회원가입 비밀번호는 백엔드 명세에 맞춰 8~128자를 허용합니다.
-재설정 비밀번호는 영문·숫자·특수문자를 포함한 8~16자이며 공백은 허용하지 않습니다.
-인증번호는 6자리입니다. 재발송 제한(60초)과 인증 실패·만료는 서버 응답으로 안내합니다.
-재설정 토큰은 컴포넌트 메모리에만 보관합니다. 새로고침하면 이메일 인증부터 다시 진행합니다.
-비밀번호 찾기의 실제 메일 수신은 백엔드 SMTP 설정이 필요합니다.
-로그인 토큰은 sessionStorage의 moeum.access_token에 저장하며 비밀번호는 저장하지 않습니다.
-보호된 화면을 열 때 /me로 세션을 확인합니다. 로그아웃은 서버 세션 삭제가 성공한 뒤 토큰을 삭제합니다.
-아이디 찾기는 해당 백엔드 API가 없고 이메일로 로그인하므로 로그인 화면에서 제거했습니다.
-프로젝트 CRUD와 Story 생성·조회·수정·삭제, AI 분석은 실제 서버 API와 연결합니다. Story 연결 규약과 검증 범위는 `docs/story-api-integration.md`를 참고하세요.
+   ```powershell
+   .\.venv\Scripts\python.exe -m uvicorn app.main:app --reload
+   ```
 
-## 프로젝트 API 연결
+2. 프론트엔드의 `.env.local`에 로컬 서버 주소를 설정합니다.
 
-로컬 백엔드의 `/openapi.json` 명세를 기준으로 연결했습니다. 기존 로그인 토큰을 Authorization 헤더에 전달합니다.
+   ```dotenv
+   VITE_API_BASE_URL=http://127.0.0.1:8000
+   ```
 
-| 기능 | API | 화면 |
-| --- | --- | --- |
-| 목록 조회 | GET /projects?limit=100&offset=0&project_status=all | 프로젝트 목록·헤더 프로젝트 선택 |
-| 상세 조회 함수 | GET /projects/{project_id} | 필요 시 상세 재조회용 |
-| 생성 | POST /projects | 프로젝트 생성 |
-| 부분 수정 | PATCH /projects/{project_id} | 설정의 이름·설명·도구 URL |
-| 영구 삭제 | DELETE /projects/{project_id} | 설정의 삭제 확인 모달 |
+3. 프론트 개발 서버를 `npm run dev`로 다시 시작합니다. API 목록은 [로컬 Swagger](http://127.0.0.1:8000/docs)에서 확인할 수 있습니다.
 
-- `src/api/projects.ts`: API 요청과 서버 응답을 화면 데이터로 바꾸는 함수. 목록은 100개씩 끝까지 조회합니다.
-- 로그인 확인 후 프로젝트를 불러옵니다. 로딩 스켈레톤·실패 시 재시도·빈 목록을 구분합니다.
-- 생성·수정·삭제는 서버 성공 후 화면 상태에 반영합니다. 실패하면 입력값과 프로젝트를 유지하고 오류를 안내합니다.
-- 설정의 이름·설명은 Enter 또는 포커스를 옮길 때 변경된 필드만 저장합니다. 저장 중 중복 요청을 막고 서버 응답 후 성공을 표시합니다.
-- GitHub·Figma·Notion은 생성 화면에서 URL을 입력하고 설정에서 수정·해제할 수 있습니다. GitHub 공개 저장소의 최근 기록은 대시보드에서 직접 조회합니다. URL 저장 자체는 OAuth 권한을 부여하지 않습니다.
-- 마지막으로 선택한 프로젝트 ID만 로그인 회원별 sessionStorage에 저장합니다. 프로젝트 원본은 새로고침 시 서버에서 조회합니다.
-- 보관·보관 해제 API는 현재 화면에 버튼이 없어 연결하지 않았습니다. 서버의 보관 상태는 목록에 표시합니다.
-- 인증 헤더, 페이지 조회, 부분 수정 요청, 본문 없는 204 삭제 응답, 오류 응답과 데이터 변환을 모의 응답으로 검증했습니다.
-- 2026-10-21 로컬 서버에서 실제 프론트 API 모듈과 Vite 프록시를 통해 테스트 계정 생성·로그인, 프로젝트 생성(201)·목록/상세 조회(200)·부분 수정(200), 로그아웃 후 재로그인 시 데이터 유지, 영구 삭제(204)와 삭제 후 상세 조회(404)를 확인했습니다. 테스트 프로젝트는 삭제했고 테스트 계정(ID 11)은 남아 있습니다. 브라우저 클릭 기반 화면 검증은 별도로 필요합니다.
+기본 Figma 플러그인은 Render에 데이터를 보냅니다. 플러그인 연결을 시험할 때는 프론트도 Render API에 연결해 같은 서버에서 코드를 발급받으세요. [플러그인 매니페스트](./figma-plugin-local/manifest.json) · [Figma 실시간 연결 안내](./docs/connection-deployment-check.md)
 
-## GitHub OAuth 추가 설정
+### 테스트와 빌드
 
-프론트 버튼과 콜백 처리는 연결되어 있지만, GitHub 로그인을 완성하려면
-백엔드 .env의 GITHUB_REDIRECT_URI와 GitHub OAuth App의 Authorization callback URL을
-둘 다 실제 프론트 주소의 /auth/github/callback으로 설정해야 합니다.
-기본 개발 주소를 사용할 때의 예:
+| 명령 | 결과 |
+| --- | --- |
+| `npm test` | API 응답 처리와 화면 데이터 변환 등 자동 테스트를 실행합니다. |
+| `npm run test:browser` | Playwright로 Story 작성 흐름을 검증합니다. 기본 브라우저는 로컬 Chrome입니다. |
+| `npm run build` | TypeScript 타입 검사 후 배포 파일을 `dist/`에 생성합니다. |
+| `npm run preview` | 빌드한 `dist/`를 로컬에서 미리 봅니다. |
 
-```env
-GITHUB_REDIRECT_URI=http://127.0.0.1:5173/auth/github/callback
+## 환경 정보
+
+| 영역 | 기술 및 버전 |
+| --- | --- |
+| 개발 환경 | Windows PowerShell, Node.js 24.13.0, npm 11.21.0 |
+| UI와 상태 관리 | React 19.3.0, TypeScript 5.9.3, React Router 7.18.4, React Context 및 Hooks |
+| 스타일과 빌드 | CSS Modules, Pretendard, Vite 8.3.1 |
+| 테스트 | Node.js 기본 테스트 러너, Playwright 1.65.1 |
+| 서버와 DB | Python 3.12 이상, FastAPI, Uvicorn, SQLAlchemy, PyMySQL, TiDB(MySQL 호환) |
+| 메일 | 피드백 전송은 EmailJS Browser SDK 5.0.3, 비밀번호 재설정 인증번호 발송은 백엔드 Gmail API |
+
+프론트엔드 패키지 버전은 잠금 파일 기준이며, 이 버전의 Vite가 지원하는 Node.js 범위는 `^20.19.0 || >=22.12.0`입니다. [package-lock.json](./package-lock.json)
+
+### 프론트엔드 환경변수
+
+`.env`의 기본 구성입니다. `VITE_API_BASE_URL`에는 서버의 기본 주소를 입력합니다. EmailJS 세 값은 피드백 메일을 보낼 때 함께 설정합니다. [.env.example](./.env.example) · [EmailJS 설정 안내](./docs/feedback-emailjs.md)
+
+```dotenv
+VITE_API_BASE_URL=https://fastapi-practice-jwse.onrender.com
+
+# 피드백 메일을 보낼 때 설정하는 공개 식별자
+VITE_EMAILJS_SERVICE_ID=
+VITE_EMAILJS_TEMPLATE_ID=
+VITE_EMAILJS_PUBLIC_KEY=
 ```
 
-GITHUB_CLIENT_ID와 GITHUB_CLIENT_SECRET도 백엔드에 설정한 뒤 백엔드를 재시작합니다.
-프론트는 같은 호스트와 포트로 접속해야 합니다. localhost와 127.0.0.1을 섞지 않습니다.
-Vite 프록시의 cookiePathRewrite는 OAuth state 쿠키를 콜백 요청에도 전달하도록 설정합니다.
-기존 백엔드 콜백 주소(8000 포트)를 그대로 두면 프론트 대신 JSON 응답 화면으로 이동합니다.
-배포 시 서로 다른 출처에서 OAuth를 사용할 경우 쿠키, credentials 및 백엔드 CORS 설정도 맞춰야 합니다.
-
-## 확인
-
-## 공통 모달과 화면 안내
-
-- 선택·확인 모달은 `ConfirmDialog`를 재사용합니다. 선택 확정은 `tone="primary"`, 삭제는 `tone="danger"`로 구분하며 취소·Escape·배경 클릭을 지원합니다.
-- 대시보드는 S3에서 저장한 `github_url`의 저장소를 사용합니다. 별도 Repository 선택 단계는 없습니다.
-- `PageGuide`는 프로젝트 목록부터 우측 하단에 표시합니다. 버튼에 hover하거나 키보드 focus를 두면 현재 화면의 활동 안내 한 줄이 나오며, 로그인·회원가입·비밀번호 찾기에는 표시하지 않습니다. 터치로도 열 수 있고 Escape로 닫을 수 있습니다.
-
-### 인증 화면 스타일과 로딩
-
-- Figma 로그인 / 회원가입 / 비밀번호 찾기 컴포넌트를 기준으로 카드(460px), 입력창(56px), 버튼, 오류·성공 안내를 공통화했습니다.
-- 입력창 좌우 padding은 요청에 따라 32px에서 16px로 줄였습니다.
-- `src/components/AuthUI.tsx`: 공통 인증 레이아웃, 입력창, 버튼, 요청 중 표시.
-- `src/components/Skeleton.tsx`: 입력 폼, GitHub 인증, 로그인 세션 조회의 스켈레톤.
-- 회원가입은 이름·아이디 → 이메일 → 비밀번호 → 완료 순서입니다. 별도 아이디와 비밀번호 확인은 현재 백엔드 연동에 맞춰 유지합니다.
-- 이메일 중복은 회원가입 서버 응답에서 확인하며, 별도의 중복 조회 API가 없으므로 입력만으로 사용 가능하다고 안내하지 않습니다.
-- 비밀번호 찾기는 이메일 확인 → 인증번호 발송 → 인증번호 확인 → 새 비밀번호 설정 순서입니다.
-- 요청 중 기존 폼과 입력값은 유지하고 같은 위치에 스켈레톤을 표시합니다. 중복 제출과 입력은 막습니다.
-- 스켈레톤은 화면 읽기 도구에 로딩 상태를 알리며, 움직임 줄이기 설정에서는 애니메이션을 끕니다.
-- 빌드와 React 서버 렌더링 검사를 수행했습니다. 이 환경에서는 브라우저 자동 실행이 차단되어 캡처 기반 시각 검증은 완료하지 못했습니다.
-
-- 빌드: npm run build
-- F12 → Network에서 요청 경로, 상태 코드와 Response를 확인합니다.
-- API 전송 규약은 로컬 백엔드 라우터 및 Pydantic 스키마를 기준으로 작성했습니다.
-- 실제 MySQL·SMTP·GitHub 로그인 성공 여부는 해당 서비스가 실행된 환경에서 확인해야 합니다.
-
-## 대시보드 GitHub 실시간 조회
-
-- `src/api/github.ts`: GitHub 공식 REST API로 공개 저장소 메타데이터, 전체 브랜치 목록(100개씩 페이지 조회), 선택한 브랜치의 최신 커밋 5개와 각 커밋의 추가/삭제 줄 수를 조회합니다.
-- `src/components/GitHubActivity.tsx`: 미연결, 조회 중, 빈 저장소, 오류, 정상 목록을 구분합니다. 브랜치 변경·프로젝트 변경·URL 변경·화면 이탈 시 이전 요청을 취소합니다. 자동 폴링은 하지 않으며 새로고침 버튼으로 다시 조회합니다.
-- 미연결이면 안내와 ‘설정에서 연결하기’를 표시합니다. 오류는 재시도와 연결 설정 링크를 제공합니다. 일부 통계만 실패하면 커밋은 유지하고 해당 줄 수를 `—`로 표시합니다.
-- 기본 브랜치는 GitHub 응답을 사용합니다. 커밋과 전체 보기 링크는 실제 GitHub 화면을 엽니다. 부모가 2개 이상인 경우 ‘머지 커밋’으로 표시하며, 커밋 API에서 알 수 없는 푸시 이벤트를 추정하지 않습니다.
-- 모음 로그인 토큰은 GitHub에 전달하지 않습니다. 현재 구현은 공개 저장소만 지원합니다. 비공개 저장소는 백엔드에 GitHub 토큰 보관 및 권한 기반 조회 API가 있어야 지원할 수 있습니다. 미인증 GitHub API의 요청 제한에 걸리면 오류 안내를 표시합니다.
-- Story에 연결할 GitHub 변경사항은 백엔드의 브랜치 목록과 수집 API를 거쳐 DB에 저장하고, 미정리 변경사항 조회 API가 반환한 숫자형 `activity_id`를 사용합니다. 대시보드의 최근 커밋 표는 기존 GitHub 직접 조회를 유지합니다.
-- Story 초안 생성 시 선택한 변경사항을 서버에서 연결합니다. 초안·완료 상태와 회고 내용은 서버에 저장하고, 새로고침 후 목록·상세·연결된 변경사항을 다시 조회합니다. 현재 서버 규약에서는 초안에 연결된 변경사항도 미정리 목록에서 제외됩니다.
-- 회귀 검증: `node --test tests/github-api.test.mjs`, 빌드: `npm run build`.
-
-## Story API 연동
-
-- 개발 서버 대상: `.env.local`의 `VITE_API_BASE_URL`. 배포 환경에서도 같은 환경 변수를 지정하고 백엔드 CORS 허용을 설정합니다.
-- S5에서 1~20개 변경사항 선택 → S6에서 실제 AI 분석 → ‘Story 작성 시작’으로 서버 초안 생성 → S7 자동 저장 및 완료.
-- 직접 작성은 제목 입력 후 초안을 생성합니다. 작성 중에는 입력 중단 1초 후 변경한 필드만 저장합니다. 실패하면 입력을 유지하고 재시도할 수 있습니다.
-- 상세·수정 URL을 직접 열거나 새로고침해도 서버에서 다시 불러옵니다. 대시보드·타임라인의 목록 조회 실패는 빈 목록과 구분합니다.
-- 자세한 경로, 데이터 매핑, 서버 제약, 검증 절차: [Story API 연동](docs/story-api-integration.md).
+개발 중에는 Vite가 `/backend` 요청을 설정한 API 주소로 전달합니다. 배포 빌드는 API 서버를 직접 호출하므로 Render의 `FRONTEND_ORIGINS`에 `https://moeum-log.vercel.app`을 포함합니다. `VITE_`로 시작하는 값은 브라우저에 공개됩니다. DB 비밀번호, OAuth 비밀 키, Gmail 갱신 토큰은 백엔드에서 관리합니다.
