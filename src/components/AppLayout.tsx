@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router';
 import logo from '../../assets/moeum-logo-header.svg';
 import chevronDown from '../../assets/icons/chevron-down.svg';
 import { useProjects } from '../state/ProjectsContext';
+import { FeedbackDialog } from './FeedbackDialog';
 import { PageGuide } from './PageGuide';
 import { ProfileMenu } from './ProfileMenu';
 import styles from './AppLayout.module.css';
@@ -16,6 +17,8 @@ const navigation = [
 // header="centered": 프로젝트를 고르기 전 화면(s2, s3). header="project": 프로젝트 안의 화면(s4~).
 export function AppLayout({ header }: { header: 'centered' | 'project' }) {
   const { pathname } = useLocation();
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const feedbackButton = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -24,28 +27,37 @@ export function AppLayout({ header }: { header: 'centered' | 'project' }) {
   return (
     <div className={styles.app}>
       <header className={styles.headerBar}>
-        {header === 'centered' ? (
-          <div className={`${styles.header} ${styles.centered}`}>
-            <HomeLink />
-            <ProfileMenu />
-          </div>
-        ) : (
-          <div className={styles.header}>
-            <HomeLink />
+        <div className={`${styles.header} ${header === 'centered' ? styles.centered : ''}`}>
+          <HomeLink />
+          {header === 'project' && <>
             <ProjectMenu />
             <nav className={styles.navigation} aria-label="주 메뉴">
               {navigation.map((item) => (
                 <NavLink key={item.to} to={item.to} className={({ isActive }) => isActive ? styles.active : undefined}>{item.label}</NavLink>
               ))}
             </nav>
+          </>}
+          <div className={styles.headerActions}>
+            <button ref={feedbackButton} type="button" className={styles.feedbackButton}
+              aria-haspopup="dialog" aria-expanded={feedbackOpen} onClick={() => setFeedbackOpen(true)}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M5 3.75h14A2.25 2.25 0 0 1 21.25 6v10A2.25 2.25 0 0 1 19 18.25H9L3 21V6a2.25 2.25 0 0 1 2-2.25Z" />
+                <path d="M7.5 8.5h9m-9 4h6" />
+              </svg>
+              <span>피드백 보내기</span>
+            </button>
             <ProfileMenu />
           </div>
-        )}
+        </div>
       </header>
       <main className={styles.main}>
         <Outlet />
       </main>
       <PageGuide key={pathname} pathname={pathname} />
+      {feedbackOpen && <FeedbackDialog onClose={() => {
+        setFeedbackOpen(false);
+        feedbackButton.current?.focus();
+      }} />}
     </div>
   );
 }

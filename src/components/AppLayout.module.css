@@ -5,6 +5,26 @@
 .logo { width: 96px; height: 100px; flex: none; display: flex; align-items: center; justify-content: center; }
 .logo img { display: block; }
 .main { width: 100%; max-width: 1920px; margin-inline: auto; flex: 1; }
+.headerActions { display: flex; align-items: center; flex: none; gap: 12px; margin-left: auto; }
+.feedbackButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--color-muted);
+  font-size: 14px;
+  line-height: 20px;
+  word-break: keep-all;
+  transition: background-color 150ms, color 150ms;
+}
+.feedbackButton:hover { background: var(--color-selected); color: var(--color-link); }
+.feedbackButton svg { flex: none; width: 20px; height: 20px; }
 
 .projectMenu { position: relative; z-index: 1; flex: none; }
 .projectButton { display: flex; align-items: center; gap: 8px; max-width: 280px; padding: 8px 0; border: 0; background: none; color: inherit; font-size: 20px; line-height: 24px; font-weight: 700; }
@@ -39,13 +59,18 @@
   .projectButton { max-width: 220px; }
   .navigation { gap: 24px; font-size: 18px; }
 }
-@media (max-width: 760px) {
+@media (min-width: 769px) and (max-width: 950px) {
+  .projectButton { max-width: min(220px, calc(100vw - 660px)); }
+}
+@media (max-width: 768px) {
   .header { height: auto; min-height: 72px; padding: 0 16px 8px; flex-wrap: wrap; gap: 0 8px; }
   .centered { min-height: 100px; padding: 0 16px; }
   .header:not(.centered) .logo { width: auto; height: 72px; margin-right: 8px; }
-  .projectButton { font-size: 16px; max-width: min(200px, calc(100vw - 208px)); }
+  .projectButton { font-size: 16px; max-width: min(200px, 100%); }
   /* 좁은 화면에서는 프로젝트 이름 위치와 상관없이 화면 안에 들어오도록 헤더 왼쪽 여백에 맞춰 엽니다. */
-  .projectMenu { position: static; }
+  .projectMenu { position: static; flex: 1; min-width: 0; }
+  .headerActions { gap: 8px; }
+  .centered .headerActions { max-width: calc(50% - 52px); }
   .menu { top: 64px; left: 16px; z-index: 1; width: min(260px, calc(100vw - 32px)); }
   .navigation { order: 1; flex-basis: 100%; justify-content: space-around; gap: 16px; font-size: 16px; }
 }
@@ -55,6 +80,10 @@
   .centered { min-height: 72px; }
   .logo, .header:not(.centered) .logo { width: 66px; height: 60px; margin-right: 0; }
   .logo img { width: 66px; height: 22px; }
+  .headerActions { gap: 4px; }
+  .centered .headerActions { max-width: calc(50% - 37px); }
+  .feedbackButton { gap: 4px; padding: 4px; }
+  .feedbackButton svg { width: 16px; height: 16px; }
   .projectMenu { flex: 1; min-width: 0; }
   .projectButton { width: 100%; max-width: none; gap: 4px; min-height: 44px; font-size: var(--font-mobile-label); line-height: 20px; }
   .projectButton img { width: 20px; height: 20px; }

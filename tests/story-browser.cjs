@@ -75,8 +75,7 @@ let debugPage, debugBrowser, server;
   await page.getByRole('checkbox').first().waitFor();
   for (const width of [1440, 375]) {
     await page.setViewportSize({ width, height: 1000 });
-    const periodButton = page.locator('button[aria-haspopup="dialog"]').first();
-    assert.equal(await periodButton.innerText(), width === 1440 ? '전체 기간' : '기간');
+    const periodButton = page.getByRole('main').getByRole('button', { name: width === 1440 ? '전체 기간' : '기간', exact: true });
     await page.screenshot({ path: path.join(outputDir, 'changes-' + width + '.png'), fullPage: true });
     await periodButton.click();
     const dialog = page.getByRole('dialog', { name: '기간 선택' });
