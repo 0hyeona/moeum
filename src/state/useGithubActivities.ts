@@ -15,7 +15,7 @@ export function useGithubActivities(project: Project | undefined, setProjects: D
     running.current = controller;
     setResult(last => ({ key, commits: last?.key === key ? last.commits : [], state: { status: 'loading' } }));
     try {
-      const activities: Awaited<ReturnType<typeof readGithubActivities>> & { error?: string } = sync
+      const activities: Awaited<ReturnType<typeof readGithubActivities>> & { error?: string; recovery?: 'github-reconnect' } = sync
         ? await refreshGithubActivities(id, url, controller.signal)
         : await readGithubActivities(id, url, controller.signal);
 
@@ -23,7 +23,8 @@ export function useGithubActivities(project: Project | undefined, setProjects: D
       if (controller.signal.aborted) return;
       setProjects(items => items.map(item => item.id === id && item.urls?.GitHub === url
         ? replaceServiceChanges(item, 'GitHub', changes) : item));
-      setResult({ key, commits, state: activities.error ? { status: 'error', error: activities.error } : { status: 'ready' } });
+      setResult({ key, commits, state: activities.error
+        ? { status: 'error', error: activities.error, recovery: activities.recovery } : { status: 'ready' } });
     } catch (error) {
       if (!controller.signal.aborted) setResult(last => ({ key, commits: last?.key === key ? last.commits : [],
         state: { status: 'error', error: error instanceof Error ? error.message : 'GitHub 기록을 불러오지 못했어요.' } }));

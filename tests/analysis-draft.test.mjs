@@ -14,9 +14,15 @@ Object.defineProperty(globalThis, 'sessionStorage', { configurable: true, writab
 
 function storage(t) {
   const entries = new Map();
-  t.mock.property(globalThis, 'sessionStorage', { getItem: key => entries.get(key) ?? null,
+  mockStorage(t, { getItem: key => entries.get(key) ?? null,
     setItem: (key, value) => entries.set(key, value), removeItem: key => entries.delete(key) });
   return entries;
+}
+
+function mockStorage(t, value) {
+  const previous = globalThis.sessionStorage;
+  globalThis.sessionStorage = value;
+  t.after(() => { globalThis.sessionStorage = previous; });
 }
 
 test('analysis recovery and removal are isolated by account and project', t => {
@@ -42,7 +48,7 @@ test('corrupt, mismatched or incomplete saved data cannot become an analysis', t
 });
 
 test('blocked or full storage returns a save failure so the UI can protect unsaved edits', t => {
-  t.mock.property(globalThis, 'sessionStorage', {
+  mockStorage(t, {
     getItem() { throw new Error('blocked'); }, setItem() { throw new Error('full'); }, removeItem() { throw new Error('blocked'); },
   });
   assert.equal(readAnalysisDraft(1, '7'), null);

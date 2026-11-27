@@ -126,7 +126,8 @@ function ServiceConnectionControls({ service, state, connected, reconnect, hasUr
   onRefresh: () => void;
 }) {
   const needsApproval = service === 'Notion' && hasUrl && needsNotionConnection(state);
-  const needsReconnect = hasUrl && (needsApproval || reconnect);
+  const githubReconnect = service === 'GitHub' && state.status === 'error' && state.recovery === 'github-reconnect';
+  const needsReconnect = hasUrl && (needsApproval || reconnect || githubReconnect);
   const failed = state.status === 'error';
   const loading = state.status === 'loading' || state.status === 'pending';
   const canRefreshNotion = service === 'Notion' && hasUrl && !needsReconnect && (connected || state.status === 'ready');
@@ -143,6 +144,7 @@ function ServiceConnectionControls({ service, state, connected, reconnect, hasUr
     <div className={styles.connectionActions}>
       {canRefreshNotion ? <button type="button" className={styles.statButton} disabled={loading}
         onClick={onRefresh} aria-label="Notion 새로고침">{loading ? '수집 중…' : '새로고침'}</button>
+        : githubReconnect ? <Link className={styles.statButton} to="/login?reconnect=github">GitHub 다시 연결</Link>
         : needsApproval ? <NotionConnectAction /> : <Link className={styles.statButton}
           aria-label={`${service} 연결 관리`} to={`/settings#${service.toLowerCase()}-account`}>연결 관리</Link>}
       {service === 'GitHub' && hasUrl && !needsReconnect && failed && <button type="button"

@@ -1,4 +1,5 @@
 import { projectRequest } from './projects';
+import { ApiError } from './client';
 import { githubRepository } from '../data/github';
 import { githubChanges } from '../data/githubChanges';
 import type { GitHubCommit } from './github';
@@ -65,12 +66,16 @@ export async function syncGithubActivities(id: string, signal: AbortSignal) {
 
 export async function refreshGithubActivities(id: string, url: string, signal: AbortSignal) {
   let error: string | undefined;
+  let recovery: 'github-reconnect' | undefined;
   try {
     await syncGithubActivities(id, signal);
   } catch (cause) {
-    if (signal.aborted) throw cause;
+    if (signal.aborted || (cause instanceof Error && cause.name === 'AbortError')
+      || (cause instanceof ApiError && cause.status === 401)) throw cause;
     error = cause instanceof Error ? cause.message : 'GitHub 최신 기록을 가져오지 못했어요.';
+    if (cause instanceof ApiError && cause.status === 409 && (cause.code === 'GITHUB_RECONNECT_REQUIRED'
+      || /GitHub 연결이 만료/.test(cause.message))) recovery = 'github-reconnect';
   }
   // Stored records remain readable even when GitHub rejects the latest import.
-  return { ...await readGithubActivities(id, url, signal), error };
+  return { ...await readGithubActivities(id, url, signal), error, recovery };
 }

@@ -1,6 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
+    { "source": "/backend/api/auth/:path*", "destination": "https://fastapi-practice-jwse.onrender.com/api/auth/:path*" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

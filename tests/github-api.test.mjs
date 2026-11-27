@@ -121,8 +121,14 @@ test('disconnected dashboard offers settings without a table, filters, or fetche
   assert.match(html, /\/settings#settings-url-GitHub/);
   assert.doesNotMatch(html, /<table|브랜치 필터|새로고침/);
   const loading = renderToStaticMarkup(React.createElement(MemoryRouter, null, React.createElement(GitHubActivity, { url, commits: [], state: { status: 'loading' } })));
-  assert.match(loading, /GitHub 기록을 불러오는 중/);
+  assert.match(loading, /<button[^>]*disabled[^>]*>새로고침<\/button>/);
   assert.doesNotMatch(loading, /설정에서 연결하기|<table/);
+  const reconnect = renderToStaticMarkup(React.createElement(MemoryRouter, null, React.createElement(GitHubActivity, {
+    url, commits: [], state: { status: 'error', error: 'GitHub 연결이 만료되었습니다.', recovery: 'github-reconnect' },
+  })));
+  assert.match(reconnect, /GitHub 다시 연결/);
+  assert.match(reconnect, /\/login\?reconnect=github/);
+  assert.doesNotMatch(reconnect, /다시 시도|>새로고침</);
 });
 
 test('pending changes include paginated branch history, with shared commits counted once', async t => {

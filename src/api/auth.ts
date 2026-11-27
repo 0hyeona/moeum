@@ -1,17 +1,13 @@
 
-import { ApiError, apiRequest } from './client';
+import { ApiError, apiRequest, clearAccessToken, getAccessToken, saveLoginResponse, type SessionResponse } from './client';
+export { clearAccessToken, getAccessToken };
 
 export type LoginRequest = {
   email: string;
   password: string;
 };
 
-type LoginResponse = {
-  access_token: string;
-  token_type: string;
-};
-
-const TOKEN_KEY = 'moeum.access_token';
+type LoginResponse = SessionResponse;
 
 export type AuthUser = {
   id: number;
@@ -118,26 +114,17 @@ export async function logout(): Promise<void> {
   clearAccessToken();
 }
 
-// 저장된 액세스 토큰 조회
-export function getAccessToken(): string | null {
-  return sessionStorage.getItem(TOKEN_KEY);
-}
-
-// 액세스 토큰 삭제
-export function clearAccessToken(): void {
-  sessionStorage.removeItem(TOKEN_KEY);
-}
-
 // 일반 이메일 로그인
 export async function login(
   credentials: LoginRequest
 ): Promise<LoginResponse> {
+  const startedAt = Date.now();
   const data = await apiRequest<unknown>('/api/auth/login', {
     method: 'POST',
     body: JSON.stringify(credentials),
   });
 
-  return saveLoginResponse(data);
+  return saveLoginResponse(data, startedAt);
 }
 
 // GitHub OAuth 로그인 시작
@@ -199,7 +186,8 @@ export function completeGithubLogin(
     return githubExchange.promise;
   }
 
-  // 일회용 로그인 코드를 JWT로 교환
+  // 일회용 로그인 코드를 MOEUM 세션 토큰으로 교환
+  const startedAt = Date.now();
   const promise = apiRequest<unknown>(
     '/api/auth/github/exchange',
     {
@@ -208,7 +196,7 @@ export function completeGithubLogin(
         code: loginCode,
       }),
     }
-  ).then(saveLoginResponse);
+  ).then(data => saveLoginResponse(data, startedAt));
 
   githubExchange = {
     code: loginCode,
@@ -216,46 +204,4 @@ export function completeGithubLogin(
   };
 
   return promise;
-}
-
-// 로그인 응답 검증 및 토큰 저장
-function saveLoginResponse(data: unknown): LoginResponse {
-  // 서버 응답의 JWT 형식 검증
-  if (
-    typeof data !== 'object' ||
-    data === null ||
-    !('access_token' in data) ||
-    typeof data.access_token !== 'string' ||
-    !data.access_token.trim() ||
-    (
-      'token_type' in data &&
-      (
-        typeof data.token_type !== 'string' ||
-        data.token_type.toLowerCase() !== 'bearer'
-      )
-    )
-  ) {
-    throw new Error(
-      '로그인 응답의 access_token 또는 token_type 형식을 확인해주세요.'
-    );
-  }
-
-  const result: LoginResponse = {
-    access_token: data.access_token,
-    token_type: 'bearer',
-  };
-
-  try {
-    // 비밀번호는 저장하지 않고 액세스 토큰만 저장
-    sessionStorage.setItem(
-      TOKEN_KEY,
-      result.access_token
-    );
-  } catch {
-    throw new Error(
-      '로그인 정보를 저장하지 못했습니다. 브라우저의 사이트 저장소 설정을 확인해주세요.'
-    );
-  }
-
-  return result;
 }

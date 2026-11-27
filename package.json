@@ -9,6 +9,7 @@
     "preview": "vite preview --host 127.0.0.1",
     "test": "node --test tests/*.test.mjs",
     "test:browser": "node tests/story-browser.cjs",
+    "test:auth-browser": "node tests/auth-session-browser.cjs",
     "preview:feedback": "node tests/feedback-preview.mjs"
   },
   "dependencies": {

@@ -7,11 +7,38 @@ const read = path => readFile(new URL(path, import.meta.url), 'utf8');
 const moduleUrl = source => 'data:text/javascript;base64,' + Buffer.from(ts.transpileModule(source, {
   compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
 }).outputText).toString('base64');
+const client = moduleUrl((await read('../src/api/client.ts')).replaceAll('import.meta.env.DEV', 'true'));
+const { ApiError } = await import(client);
 const source = (await read('../src/api/activities.ts'))
+  .replace("'./client'", JSON.stringify(client))
   .replace("'./projects'", JSON.stringify(moduleUrl('export const projectRequest = (...args) => globalThis.dashboardRequest(...args)')))
   .replace("'../data/github'", JSON.stringify(moduleUrl(await read('../src/data/github.ts'))))
   .replace("'../data/githubChanges'", JSON.stringify(moduleUrl(await read('../src/data/githubChanges.ts'))));
 const { readGithubActivities, syncGithubActivities, refreshGithubActivities } = await import(moduleUrl(source));
+
+test('an expired MOEUM session never falls back to another protected request', async t => {
+  t.after(() => { delete globalThis.dashboardRequest; });
+  let calls = 0;
+  globalThis.dashboardRequest = async () => {
+    calls++;
+    throw new ApiError(401, { detail: '유효하지 않거나 만료된 로그인입니다.' });
+  };
+  await assert.rejects(refreshGithubActivities('7', 'https://github.com/team/repo', new AbortController().signal),
+    error => error.status === 401);
+  assert.equal(calls, 1);
+});
+
+test('GitHub credential expiry keeps saved records and asks for GitHub reconnection', async t => {
+  t.after(() => { delete globalThis.dashboardRequest; });
+  globalThis.dashboardRequest = async path => {
+    if (path.includes('/github/branches')) throw new ApiError(409,
+      { detail: 'GitHub 연결이 만료되었습니다.' }, new Headers({ 'X-Integration-Error': 'GITHUB_RECONNECT_REQUIRED' }));
+    return [];
+  };
+  const result = await refreshGithubActivities('7', 'https://github.com/team/repo', new AbortController().signal);
+  assert.equal(result.recovery, 'github-reconnect');
+  assert.match(result.error, /GitHub 연결/);
+});
 
 test('rate-limited refresh still returns saved records with a visible warning', async t => {
   t.after(() => { delete globalThis.dashboardRequest; });

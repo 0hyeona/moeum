@@ -34,6 +34,7 @@ let debugPage, debugBrowser, server;
     const req = route.request(), url = new URL(req.url()), path = url.pathname.replace('/backend',''), method=req.method();
     const body = req.postDataJSON(); requests.push({path,method,body});
     const respond = (data,status=200) => route.fulfill({status,contentType:'application/json',body:JSON.stringify(data)});
+    if (path === '/api/auth/refresh') return respond({ access_token: 'test-only-token', token_type: 'bearer', expires_in: 30 * 86400 });
     if (path === '/api/auth/me') return respond({ id: 1, user_id: 'test', name: '테스트', email: 'test@example.invalid', account_status:'active', created_at:now });
     if (path === '/projects') return respond(projects);
     if (path === '/projects/7' && method === 'PATCH') {

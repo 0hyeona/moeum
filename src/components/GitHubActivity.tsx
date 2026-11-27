@@ -34,12 +34,13 @@ function ConnectedActivity({ url, state, commits, onRefresh }: Props) {
   const historyUrl = selectedBranch ? repositoryUrl + '/commits/' + encodeURIComponent(selectedBranch) : repositoryUrl;
   const loading = state.status === 'loading';
   const error = state.status === 'error' ? state.error : '';
+  const reconnect = state.status === 'error' && state.recovery === 'github-reconnect';
 
   return <>
     <div className={styles.panelHeader}>
       <h2 id="commit-heading">최근 GitHub 변경사항</h2>
       <div className={styles.githubActions}>
-        <button type="button" className={styles.refreshButton} disabled={loading} onClick={onRefresh}>새로고침</button>
+        {!reconnect && <button type="button" className={styles.refreshButton} disabled={loading} onClick={onRefresh}>새로고침</button>}
         {repositoryUrl && commits.length > 0 && <a href={historyUrl} target="_blank" rel="noreferrer">GitHub에서 전체 보기</a>}
       </div>
     </div>
@@ -51,8 +52,10 @@ function ConnectedActivity({ url, state, commits, onRefresh }: Props) {
       <p role="alert">{error}</p>
       {commits.length > 0 && <p>저장된 기록은 계속 볼 수 있어요. 최신 변경사항은 다음 새로고침에서 확인하세요.</p>}
       <div className={styles.githubActions}>
-        <button type="button" className={ui.primaryButton} onClick={onRefresh}>다시 시도</button>
-        <Link to="/settings#settings-url-GitHub">연결 설정 확인</Link>
+        {reconnect ? <Link className={ui.primaryButton} to="/login?reconnect=github">GitHub 다시 연결</Link> : <>
+          <button type="button" className={ui.primaryButton} onClick={onRefresh}>다시 시도</button>
+          <Link to="/settings#settings-url-GitHub">연결 설정 확인</Link>
+        </>}
       </div>
     </div>}
     {loading && !recent.length ? null

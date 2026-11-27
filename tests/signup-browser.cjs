@@ -24,6 +24,7 @@ const assert = require('node:assert/strict');
       const body = request.postDataJSON();
       requests.push({ path, body });
       const respond = (data, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(data) });
+      if (path === '/api/auth/refresh') return respond({ detail: '로그인이 필요합니다.' }, 401);
       if (path === '/api/auth/password/check-email') {
         if (holdEmail) {
           holdEmail = false;

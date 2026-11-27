@@ -5,7 +5,7 @@ export type ActivityState =
   | { status: 'pending' }
   | { status: 'loading' }
   | { status: 'ready' }
-  | { status: 'error'; error: string };
+  | { status: 'error'; error: string; recovery?: 'github-reconnect' };
 
 // Frontend view model; map the confirmed backend schema to these fields.
 export type ActivityItem = {
